@@ -49,7 +49,11 @@ INSTALLED_APPS = (
     'django_nose',
 
     # Release utilities
-    'release_util'
+    'release_util',
+
+    # For release_util testing only!
+    # Not to be added to INSTALLED_APPS otherwise.
+    'release_util.tests',
 )
 
 MIGRATION_MODULES = {
