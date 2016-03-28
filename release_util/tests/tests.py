@@ -64,7 +64,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         self._check_command_output(
             "show_unapplied_migrations",
-            "Checking... Unapplied migrations: [('release_util', '0001_initial'), ('release_util', '0002_second')]",
+            '[["release_util", "0001_initial"], ["release_util", "0002_second"]]',
             1
         )
 
@@ -72,7 +72,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         self._check_command_output(
             "show_unapplied_migrations",
-            "Checking... Unapplied migrations: [('release_util', '0002_second')]",
+            '[["release_util", "0002_second"]]',
             1
         )
 
@@ -80,7 +80,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         self._check_command_output(
             "show_unapplied_migrations",
-            "Checking... All migration files have been applied.",
+            "[]",
             0
         )
 
@@ -97,7 +97,7 @@ class MigrationCommandsTests(TransactionTestCase):
         with self.assertRaises(SystemExit):
             call_command("show_unapplied_migrations", stdout=out, verbosity=0)
         self.assertEqual(
-            "Checking... Unable to check migrations: cannot connect to database 'default'.",
+            "null",
             out.getvalue().replace('\n', '')
         )
 
