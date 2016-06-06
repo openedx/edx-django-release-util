@@ -2,6 +2,7 @@ from cStringIO import StringIO
 from mock import patch, Mock
 import contextlib
 from path import Path as path
+import yaml
 
 from django.test import TransactionTestCase
 from django.core.management import call_command
@@ -46,13 +47,19 @@ class MigrationCommandsTests(TransactionTestCase):
     """
     multi_db = True
 
-    def _check_command_output(self, command, output, exit_value):
+    def _check_command_output(self, cmd, cmd_kwargs, output, exit_value, yaml_output=False):
         out = StringIO()
         with patch('sys.exit') as exit_mock:
-            call_command(command, stdout=out, verbosity=0)
+            call_command(cmd, stdout=out, verbosity=0, **cmd_kwargs)
             self.assertTrue(exit_mock.called)
             exit_mock.assert_called_once_with(exit_value)
-        self.assertEqual(output, out.getvalue().replace('\n', ''))
+        if yaml_output:
+            # Ensure the command output is parsable as YAML -and- is the expected YAML.
+            parsed_yaml = yaml.load(out.getvalue())
+            self.assertTrue(isinstance(parsed_yaml, dict))
+            self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
+        else:
+            self.assertEqual(output, out.getvalue().replace('\n', ''))
 
     def test_showmigrations_list(self):
         """
@@ -62,44 +69,48 @@ class MigrationCommandsTests(TransactionTestCase):
         # Reset the release_util migrations to the very beginning - i.e. no tables.
         call_command("migrate", "release_util", "zero", verbosity=0)
 
-        self._check_command_output(
-            "show_unapplied_migrations",
-            '[["release_util", "0001_initial"], ["release_util", "0002_second"]]',
-            1
-        )
+        for fail_on_unapplied, exit_code in (
+            (True, 1),
+            (False, 0),
+        ):
+            self._check_command_output(
+                "show_unapplied_migrations",
+                {'fail_on_unapplied': fail_on_unapplied},
+                {'migrations': {'release_util': [u'0001_initial', u'0002_second']}},
+                exit_code,
+                yaml_output=True
+            )
 
         call_command("migrate", "release_util", "0001", verbosity=0)
 
-        self._check_command_output(
-            "show_unapplied_migrations",
-            '[["release_util", "0002_second"]]',
-            1
-        )
+        for fail_on_unapplied, exit_code in (
+            (True, 1),
+            (False, 0),
+        ):
+            self._check_command_output(
+                "show_unapplied_migrations",
+                {'fail_on_unapplied': fail_on_unapplied},
+                {'migrations': {'release_util': [u'0002_second']}},
+                exit_code,
+                yaml_output=True
+            )
 
         call_command("migrate", "release_util", "0002", verbosity=0)
 
-        self._check_command_output(
-            "show_unapplied_migrations",
-            "[]",
-            0
-        )
+        for fail_on_unapplied, exit_code in (
+            (True, 0),
+            (False, 0),
+        ):
+            self._check_command_output(
+                "show_unapplied_migrations",
+                {'fail_on_unapplied': fail_on_unapplied},
+                {'migrations': {}},
+                exit_code,
+                yaml_output=True
+            )
 
         # Cleanup by unmigrating everything
         call_command("migrate", "release_util", "zero", verbosity=0)
-
-    @patch.object(MigrationLoader, '__init__')
-    def test_bogus_db(self, init_error_mock):
-        """
-        Ensure that an inaccesible DB throws the proper error.
-        """
-        init_error_mock.side_effect = OperationalError
-        out = StringIO()
-        with self.assertRaises(SystemExit):
-            call_command("show_unapplied_migrations", stdout=out, verbosity=0)
-        self.assertEqual(
-            "null",
-            out.getvalue().replace('\n', '')
-        )
 
     def test_missing_migrations(self):
         """
@@ -110,6 +121,7 @@ class MigrationCommandsTests(TransactionTestCase):
         with remove_and_restore_models([('release_util', 'book'), ('release_util', 'author')]):
             self._check_command_output(
                 "detect_missing_migrations",
+                {},
                 "Checking...Apps with model changes but no corresponding migration file: ['release_util']",
                 1
             )
@@ -120,6 +132,7 @@ class MigrationCommandsTests(TransactionTestCase):
         """
         self._check_command_output(
             "detect_missing_migrations",
+            {},
             "Checking...All migration files present.",
             0
         )
