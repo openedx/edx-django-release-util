@@ -107,7 +107,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
-                    'initial_states': {'release_util': 'zero'},
+                    'initial_states': [['release_util', 'zero']],
                     'migrations': [
                         ['release_util', '0001_initial'],
                         ['release_util', '0002_second'],
@@ -126,7 +126,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
-                    'initial_states': {'release_util': '0001_initial'},
+                    'initial_states': [['release_util', '0001_initial']],
                     'migrations': [
                         ['release_util', '0002_second']
                     ]
@@ -144,7 +144,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
-                    'initial_states': {},
+                    'initial_states': [],
                     'migrations': []
                 },
                 exit_value=exit_code
@@ -188,8 +188,7 @@ class MigrationCommandsTests(TransactionTestCase):
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
         initial_states:
-          - release_util:
-            - zero
+          - [release_util, zero]
         """
         output = {
             'success': [
@@ -206,7 +205,9 @@ class MigrationCommandsTests(TransactionTestCase):
             ],
             'failure': None,
             'unapplied': [],
-            'rollback_commands': [],
+            'rollback_commands': [
+                ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
+            ],
         }
 
         out_file = tempfile.NamedTemporaryFile(suffix='.yml')
@@ -244,7 +245,8 @@ class MigrationCommandsTests(TransactionTestCase):
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
-        initial_states: {release_util: zero}
+        initial_states:
+          - [release_util, zero]
         """
         output = {
             'success': [],
@@ -275,7 +277,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd_args=(in_file.name,),
                 cmd_kwargs={'output_file': out_file.name},
                 output=output,
-                err_output="Migration failed for app 'release_util' - migration '0001_initial'.Migration error occurred.",
+                err_output="Migration error: Migration failed for app 'release_util' - migration '0001_initial'.",
                 exit_value=1
             )
         in_file.close()

@@ -84,13 +84,14 @@ class Command(BaseCommand):
         If no migrations have been performed, return 'zero' as the most recent migration for the app.
         """
         # Only care about applied migrations for the passed-in apps.
+        apps = set(apps)
         relevant_applied = [migration for migration in loader.applied_migrations if migration[0] in apps]
         # Sort them by the most recent migration and convert to a dictionary,
         # leaving apps as keys and most recent migration as values.
         most_recents = dict(sorted(relevant_applied, key=lambda m: m[1], reverse=True))
         # Fill in the apps with no migrations with 'zero'.
         # NOTE: Unicode Django application names are unsupported.
-        most_recents = {app: 'zero' if not app in most_recents else str(most_recents[app]) for app in apps}
+        most_recents = [[app, 'zero' if not app in most_recents else str(most_recents[app])] for app in apps]
         return most_recents
 
     def _gather_migration_info(self, *args, **kwargs):
