@@ -4,7 +4,6 @@ import yaml
 from cStringIO import StringIO
 from timeit import default_timer
 from collections import defaultdict
-from copy import deepcopy
 
 from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
@@ -41,6 +40,33 @@ class MigrationSession(object):
         """
         return len(self.to_apply) > 0
 
+    def _add_rollback_commands(self):
+        """
+        Generate rollback commands for the apps that have had migrations applied.
+        If an app's migration has failed, include that rollback command as well.
+        """
+        apps_to_rollback = set()
+        # Add the apps with successfully applied migrations.
+        apps_to_rollback.update([m['migration'][0] for m in self.migration_state['success']])
+        # If an app migration failed, include that rollback also.
+        if self.migration_state['failure']:
+            apps_to_rollback.add(self.migration_state['failure']['migration'][0])
+        for app in apps_to_rollback:
+            initial_app_state = None
+            for initial in self.input_migrations['initial_states']:
+                if app == initial[0]:
+                    initial_app_state = initial
+                    break
+            if not initial_app_state:
+                raise CommandError('App "{}" not found in initial migration states.'.format(app))
+            self.migration_state['rollback_commands'].append(
+                [
+                    'python', 'manage.py', 'migrate',
+                    app,
+                    initial_app_state[1]
+                ]
+            )
+
     def _apply_next(self):
         """
         Applies the next-in-line Django model migration.
@@ -57,7 +83,6 @@ class MigrationSession(object):
         except (CommandError, DatabaseError) as e:
             time_to_fail = self.timer() - start
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.stderr.write("Migration failed for app '{}' - migration '{}'.\n".format(app, migration))
             # Assumed that only a single migration failure will occur.
             self.migration_state['failure'] = {
                 'migration': [app, migration],
@@ -71,20 +96,8 @@ class MigrationSession(object):
                 self.migration_state['unapplied'].append(app_migration)
             # Find the apps that have been applied -or- failed.
             # Include their initial migrations as commands.
-            apps_to_rollback = set()
-            # Add the apps with successfully applied migrations.
-            apps_to_rollback.update([k['migration'][0] for k in self.migration_state['success']])
-            # Add the failed app.
-            apps_to_rollback.add(app)
-            for app in apps_to_rollback:
-                self.migration_state['rollback_commands'].append(
-                    [
-                        'python', 'manage.py', 'migrate',
-                        app,
-                        self.input_migrations['initial_states'][app]
-                    ]
-                )
-            raise CommandError()
+            self._add_rollback_commands()
+            raise CommandError("Migration failed for app '{}' - migration '{}'.\n".format(app, migration))
 
         time_to_apply = self.timer() - start
         self.migration_state['success'].append({
@@ -99,6 +112,7 @@ class MigrationSession(object):
         """
         while self.more_to_apply():
             self._apply_next()
+        self._add_rollback_commands()
 
     def state(self):
         """
@@ -171,7 +185,7 @@ class Command(BaseCommand):
         try:
             migrator.apply_all()
         except CommandError as e:
-            self.stderr.write("Migration error occurred.")
+            self.stderr.write("Migration error: {}".format(e.message))
             failure = True
 
         self.stdout.write(migrator.state())
