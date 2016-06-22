@@ -8,6 +8,7 @@ from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.state import ProjectState
 from django.db.utils import OperationalError
+from django.db.migrations.questioner import InteractiveMigrationQuestioner
 
 
 class Command(BaseCommand):
@@ -30,12 +31,16 @@ class Command(BaseCommand):
                 self.stdout.write("Unable to check migrations: cannot connect to database '{}'.\n".format(db))
                 sys.exit(1)
 
+            all_apps = apps.app_configs.keys()
+            questioner = InteractiveMigrationQuestioner(specified_apps=all_apps, dry_run=True)
+
             autodetector = MigrationAutodetector(
                 executor.loader.project_state(),
                 ProjectState.from_apps(apps),
+                questioner,
             )
 
-            changed.update(autodetector.changes(graph=executor.loader.graph).keys())
+            changed.update(autodetector.changes(graph=executor.loader.graph, convert_apps=all_apps).keys())
 
         if changed:
             self.stdout.write(
