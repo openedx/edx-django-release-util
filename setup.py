@@ -38,12 +38,14 @@ def load_requirements(*requirements_paths):
 long_description = io.open('README.md', encoding='utf-8').read()
 
 METADATA = dict(
-    name='django-release-util',
+    name='edx-django-release-util',
     version='0.0.1',
     description='edx-django-release-util',
+    author='edX',
+    author_email='oscm@edx.org',
     long_description=long_description,
     license='AGPL',
-    url='http://github.com/doctoryes/edx-django-release-util',
+    url='http://github.com/edx/edx-django-release-util',
     install_requires=load_requirements('requirements/base.txt',),
     tests_require=load_requirements('requirements/test.txt'),
     packages=find_packages(exclude=['*.test', '*.tests']),
