@@ -39,7 +39,7 @@ long_description = io.open('README.md', encoding='utf-8').read()
 
 METADATA = dict(
     name='edx-django-release-util',
-    version='0.0.1',
+    version='0.0.2',
     description='edx-django-release-util',
     author='edX',
     author_email='oscm@edx.org',
