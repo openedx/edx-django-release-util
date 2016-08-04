@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
+from django.db import DEFAULT_DB_ALIAS
 from django.db.utils import DatabaseError
 
 
@@ -16,7 +17,7 @@ class MigrationSession(object):
     Performs migrations while keeping track of the state of each migration.
     Provides the state of all migrations on demand.
     """
-    def __init__(self, input_yaml, stderr):
+    def __init__(self, input_yaml, stderr, database_name):
         self.to_apply = []
         self.migration_state = {
             'success': [],
@@ -26,6 +27,7 @@ class MigrationSession(object):
         }
         self.timer = default_timer
         self.stderr = stderr
+        self.database_name = database_name
 
         # Load the passed-in YAML into a dictionary.
         self.input_migrations = yaml.safe_load(input_yaml)
@@ -79,7 +81,12 @@ class MigrationSession(object):
         out = StringIO()
         start = self.timer()
         try:
-            call_command("migrate", app_label=app, migration_name=migration, noinput=True, stdout=out)
+            call_command("migrate",
+                         app_label=app,
+                         migration_name=migration,
+                         interactive=False,
+                         stdout=out,
+                         database=self.database_name)
         except (CommandError, DatabaseError) as e:
             time_to_fail = self.timer() - start
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -170,6 +177,12 @@ class Command(BaseCommand):
             help="Filename from which apps/migrations will be read."
         )
         parser.add_argument(
+            '--database',
+            dest='database',
+            default=DEFAULT_DB_ALIAS,
+            help='Nominates a database to synchronize. Defaults to the "default" database.',
+        )
+        parser.add_argument(
             '--output_file',
             dest='output_file',
             default=None,
@@ -179,7 +192,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         with open(kwargs['input_file'], 'r') as f:
             input_yaml = f.read()
-        migrator = MigrationSession(input_yaml, self.stderr)
+        migrator = MigrationSession(input_yaml, self.stderr, kwargs['database'])
 
         failure = False
         try:
