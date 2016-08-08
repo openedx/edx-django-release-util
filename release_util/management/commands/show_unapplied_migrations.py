@@ -88,7 +88,7 @@ class Command(BaseCommand):
         relevant_applied = [migration for migration in loader.applied_migrations if migration[0] in apps]
         # Sort them by the most recent migration and convert to a dictionary,
         # leaving apps as keys and most recent migration as values.
-        most_recents = dict(sorted(relevant_applied, key=lambda m: m[1], reverse=True))
+        most_recents = dict(sorted(relevant_applied, key=lambda m: m[1]))
         # Fill in the apps with no migrations with 'zero'.
         # NOTE: Unicode Django application names are unsupported.
         most_recents = [[app, 'zero' if not app in most_recents else str(most_recents[app])] for app in apps]

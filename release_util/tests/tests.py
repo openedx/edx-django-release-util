@@ -111,6 +111,7 @@ class MigrationCommandsTests(TransactionTestCase):
                     'migrations': [
                         ['release_util', '0001_initial'],
                         ['release_util', '0002_second'],
+                        ['release_util', '0003_third'],
                     ]
                 },
                 exit_value=exit_code
@@ -128,13 +129,32 @@ class MigrationCommandsTests(TransactionTestCase):
                 output={
                     'initial_states': [['release_util', '0001_initial']],
                     'migrations': [
-                        ['release_util', '0002_second']
+                        ['release_util', '0002_second'],
+                        ['release_util', '0003_third'],
                     ]
                 },
                 exit_value=exit_code
             )
 
         call_command("migrate", "release_util", "0002", verbosity=0)
+
+        for fail_on_unapplied, exit_code in (
+            (True, 1),
+            (False, 0),
+        ):
+            self._check_command_output(
+                cmd="show_unapplied_migrations",
+                cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
+                output={
+                    'initial_states': [['release_util', '0002_second']],
+                    'migrations': [
+                        ['release_util', '0003_third'],
+                    ]
+                },
+                exit_value=exit_code
+            )
+
+        call_command("migrate", "release_util", "0003", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
             (True, 0),
