@@ -1,10 +1,9 @@
 import sys
 import traceback
-import yaml
 from cStringIO import StringIO
 from timeit import default_timer
-from collections import defaultdict
 
+import yaml
 from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
@@ -17,6 +16,7 @@ class MigrationSession(object):
     Performs migrations while keeping track of the state of each migration.
     Provides the state of all migrations on demand.
     """
+
     def __init__(self, input_yaml, stderr, database_name):
         self.to_apply = []
         self.migration_state = {

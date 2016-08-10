@@ -1,17 +1,10 @@
-import re
 import sys
-import json
-from cStringIO import StringIO
-from collections import defaultdict
-import yaml
 
-from django.apps import apps
-from django.conf import settings
-from django.core.management import call_command
+import yaml
 from django.core.management.base import BaseCommand
-from django.db.utils import OperationalError
-from django.db.migrations.loader import MigrationLoader
 from django.db import DEFAULT_DB_ALIAS, connections
+from django.db.migrations.loader import MigrationLoader
+
 
 class Command(BaseCommand):
     """

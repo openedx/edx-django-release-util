@@ -1,16 +1,12 @@
-from cStringIO import StringIO
-from mock import patch, Mock
 import contextlib
-from path import Path as path
-import yaml
 import tempfile
+from cStringIO import StringIO
 
-from django.test import TransactionTestCase
+import yaml
 from django.core.management import call_command, CommandError
-from django.db.utils import OperationalError
-from django.db.migrations.loader import MigrationLoader
 from django.db.migrations.state import ProjectState
-import release_util
+from django.test import TransactionTestCase
+from mock import patch
 
 
 @contextlib.contextmanager
@@ -20,6 +16,7 @@ def remove_and_restore_models(apps):
     to simulate them not being present in the application's models.py file.
     It's used to test that missing migrations are properly detected.
     """
+
     def create_projectstate_wrapper(wrapped_func):
         # pylint: disable=missing-docstring
         wrapped_func = wrapped_func.__func__
@@ -53,11 +50,13 @@ class MigrationCommandsTests(TransactionTestCase):
         When comparing the status of a migration run, some fields won't match the test data.
         So set those fields to None before comparing.
         """
+
         def _null_migration_values(status):
             if status:
                 for key in status.keys():
                     if key in ('duration', 'output', 'traceback'):
                         status[key] = None
+
         for migration_data in status['success']:
             _null_migration_values(migration_data)
         _null_migration_values(status['failure'])
@@ -90,7 +89,6 @@ class MigrationCommandsTests(TransactionTestCase):
         # Check command error output.
         self.assertEqual(err_output, err.getvalue().replace('\n', ''))
 
-
     def test_showmigrations_list(self):
         """
         Tests output of the show_unapplied_output mgmt command.
@@ -100,8 +98,8 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "zero", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
-            (True, 1),
-            (False, 0),
+                (True, 1),
+                (False, 0),
         ):
             self._check_command_output(
                 cmd="show_unapplied_migrations",

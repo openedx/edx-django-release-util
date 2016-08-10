@@ -5,6 +5,7 @@ class Author(models.Model):
     class Meta:
         app_label = 'release_util'
         unique_together = ('name', 'slug')
+
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     birthplace = models.CharField(max_length=255)
@@ -15,6 +16,7 @@ class Author(models.Model):
 class Book(models.Model):
     class Meta:
         app_label = 'release_util'
+
     id = models.AutoField(primary_key=True)
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True)
     isbn = models.CharField(max_length=255)
@@ -23,5 +25,6 @@ class Book(models.Model):
 class Bookstore(models.Model):
     class Meta:
         app_label = 'release_util'
+
     id = models.AutoField(primary_key=True)
     address = models.CharField(max_length=255)
