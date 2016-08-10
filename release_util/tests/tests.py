@@ -1,4 +1,3 @@
-from cStringIO import StringIO
 from mock import patch, Mock
 import contextlib
 from path import Path as path
@@ -67,16 +66,21 @@ class MigrationCommandsTests(TransactionTestCase):
         """
         Run a mgmt command and perform comparisons on the output with what is expected.
         """
-        out = StringIO()
-        err = StringIO()
+        out = tempfile.TemporaryFile()
+        err = tempfile.TemporaryFile()
         # Run command.
         with patch('sys.exit') as exit_mock:
             call_command(cmd, stdout=out, stderr=err, verbosity=0, *cmd_args, **cmd_kwargs)
             self.assertTrue(exit_mock.called)
             exit_mock.assert_called_once_with(exit_value)
+        # Retrieve command output from files.
+        out.seek(0)
+        out_text = out.read()
+        err.seek(0)
+        err_text = err.read()
         # Check command output.
         if cmd in ('show_unapplied_migrations', 'run_migrations'):
-            parsed_yaml = yaml.safe_load(out.getvalue())
+            parsed_yaml = yaml.safe_load(out_text)
             self.assertTrue(isinstance(parsed_yaml, dict))
             if cmd == 'show_unapplied_migrations':
                 # Ensure the command output is parsable as YAML -and- is exactly the expected YAML.
@@ -86,9 +90,9 @@ class MigrationCommandsTests(TransactionTestCase):
                 parsed_yaml = self._null_certain_fields(parsed_yaml)
                 self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
         else:
-            self.assertEqual(output, out.getvalue().replace('\n', ''))
+            self.assertEqual(output, out_text.replace('\n', ''))
         # Check command error output.
-        self.assertEqual(err_output, err.getvalue().replace('\n', ''))
+        self.assertEqual(err_output, err_text.replace('\n', ''))
 
 
     def test_showmigrations_list(self):
