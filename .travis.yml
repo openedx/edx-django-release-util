@@ -1,8 +1,19 @@
 language: python
 python:
 - '2.7'
-install: pip install -r requirements/test.txt
-script: python manage.py test
+- '3.5'
+sudo: false
+branches:
+  only:
+  - master
+install:
+- pip install -r requirements/tox.txt
+- pip install tox-travis
+script:
+- tox
+after_success:
+- pip install coveralls
+- coveralls
 deploy:
   provider: pypi
   user: edx
