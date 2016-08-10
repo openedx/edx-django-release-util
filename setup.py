@@ -1,53 +1,26 @@
 #!/usr/bin/env python
 import io
+
 from setuptools import setup, find_packages
 
+import release_util
 
-def is_requirement(line):
-    """
-    Return True if the requirement line is a package requirement;
-    that is, it is not blank, a comment, or editable.
-    """
-    # Remove whitespace at the start/end of the line
-    line = line.strip()
-
-    # Skip blank lines, comments, and editable installs
-    return not (
-        line == '' or
-        line.startswith('-r') or
-        line.startswith('#') or
-        line.startswith('-e') or
-        line.startswith('git+')
-    )
-
-
-def load_requirements(*requirements_paths):
-    """
-    Load all requirements from the specified requirements files.
-    Returns a list of requirement strings.
-    """
-    requirements = set()
-    for path in requirements_paths:
-        requirements.update(
-            line.strip() for line in open(path).readlines()
-            if is_requirement(line)
-        )
-    return list(requirements)
-
-
-long_description = io.open('README.md', encoding='utf-8').read()
+long_description = io.open('README.rst', encoding='utf-8').read()
 
 METADATA = dict(
     name='edx-django-release-util',
-    version='0.0.5',
+    version=release_util.__version__,
     description='edx-django-release-util',
     author='edX',
     author_email='oscm@edx.org',
     long_description=long_description,
     license='AGPL',
     url='http://github.com/edx/edx-django-release-util',
-    install_requires=load_requirements('requirements/base.txt',),
-    tests_require=load_requirements('requirements/test.txt'),
+    install_requires=[
+        'django>=1.8,<1.11',
+        'PyYAML>=3.11',
+        'six>=1.10.0,<2.0.0',
+    ],
     packages=find_packages(exclude=['*.test', '*.tests']),
     include_package_data=True,
     classifiers=[
@@ -59,7 +32,13 @@ METADATA = dict(
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'Framework :: Django',
+        'Framework :: Django :: 1.8',
+        'Framework :: Django :: 1.9',
+        'Framework :: Django :: 1.10',
     ],
 )
 
