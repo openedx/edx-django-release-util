@@ -1,7 +1,7 @@
 import contextlib
 import tempfile
-from cStringIO import StringIO
 
+import six
 import yaml
 from django.core.management import call_command, CommandError
 from django.db.migrations.state import ProjectState
@@ -24,7 +24,7 @@ def remove_and_restore_models(apps):
         def _modify_app_models(*args, **kwargs):
             app_models = wrapped_func(*args, **kwargs)
             new_app_models = {}
-            for model_key, model_value in app_models.models.iteritems():
+            for model_key, model_value in six.iteritems(app_models.models):
                 if model_key not in apps:
                     new_app_models[model_key] = model_value
             return ProjectState(new_app_models)
@@ -66,8 +66,8 @@ class MigrationCommandsTests(TransactionTestCase):
         """
         Run a mgmt command and perform comparisons on the output with what is expected.
         """
-        out = StringIO()
-        err = StringIO()
+        out = six.StringIO()
+        err = six.StringIO()
         # Run command.
         with patch('sys.exit') as exit_mock:
             call_command(cmd, stdout=out, stderr=err, verbosity=0, *cmd_args, **cmd_kwargs)
@@ -118,8 +118,8 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "0001", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
-            (True, 1),
-            (False, 0),
+                (True, 1),
+                (False, 0),
         ):
             self._check_command_output(
                 cmd="show_unapplied_migrations",
@@ -137,8 +137,8 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "0002", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
-            (True, 1),
-            (False, 0),
+                (True, 1),
+                (False, 0),
         ):
             self._check_command_output(
                 cmd="show_unapplied_migrations",
@@ -155,8 +155,8 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "0003", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
-            (True, 0),
-            (False, 0),
+                (True, 0),
+                (False, 0),
         ):
             self._check_command_output(
                 cmd="show_unapplied_migrations",
@@ -230,7 +230,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         out_file = tempfile.NamedTemporaryFile(suffix='.yml')
         in_file = tempfile.NamedTemporaryFile(suffix='.yml')
-        in_file.write(input_yaml)
+        in_file.write(input_yaml.encode('utf-8'))
         in_file.flush()
 
         # Check the stdout output against the expected output.
@@ -284,7 +284,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         out_file = tempfile.NamedTemporaryFile(suffix='.yml')
         in_file = tempfile.NamedTemporaryFile(suffix='.yml')
-        in_file.write(input_yaml)
+        in_file.write(input_yaml.encode('utf-8'))
         in_file.flush()
 
         with patch('django.core.management.commands.migrate.Command.handle') as handle_mock:
