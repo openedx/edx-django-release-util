@@ -63,3 +63,6 @@ target/
 
 # SQLite DBs
 *.sqlite3
+
+# PyCharm
+.idea/

@@ -6,9 +6,9 @@ from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations.questioner import InteractiveMigrationQuestioner
 from django.db.migrations.state import ProjectState
 from django.db.utils import OperationalError
-from django.db.migrations.questioner import InteractiveMigrationQuestioner
 
 
 class Command(BaseCommand):

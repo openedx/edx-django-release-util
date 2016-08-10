@@ -1,14 +1,13 @@
 import sys
 import traceback
-import yaml
-from cStringIO import StringIO
 from timeit import default_timer
-from collections import defaultdict
 
+import yaml
 from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
 from django.db.utils import DatabaseError
+from six import StringIO
 
 
 class MigrationSession(object):
@@ -17,6 +16,7 @@ class MigrationSession(object):
     Performs migrations while keeping track of the state of each migration.
     Provides the state of all migrations on demand.
     """
+
     def __init__(self, input_yaml, stderr, database_name):
         self.to_apply = []
         self.migration_state = {
@@ -172,7 +172,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             'input_file',
-            type=unicode,
+            type=str,
             nargs='?',
             help="Filename from which apps/migrations will be read."
         )
@@ -198,7 +198,7 @@ class Command(BaseCommand):
         try:
             migrator.apply_all()
         except CommandError as e:
-            self.stderr.write("Migration error: {}".format(e.message))
+            self.stderr.write("Migration error: {}".format(e))
             failure = True
 
         self.stdout.write(migrator.state())
