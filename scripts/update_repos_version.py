@@ -1,152 +1,150 @@
 #!/usr/bin/env python
 import os
 import os.path
-import re
 import logging
 import subprocess
 import fileinput
+import tempfile
 import shutil
+
 import click
-import github
+import github3
 
-LOG_FILENAME = 'bump_repo_version_log.txt'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
-
+# List of owner/repository in which to look for/change the package version.
 REPOS_TO_CHANGE = (
-    'https://github.com/edx/credentials.git',
-    'https://github.com/edx/course-discovery.git',
-    'https://github.com/edx/ecommerce.git',
-    'https://github.com/edx/programs.git',
-    'https://github.com/edx/edx-analytics-data-api.git',
-    'https://github.com/edx/edx-analytics-dashboard.git',
-    'https://github.com/edx/xqueue.git',
-    'https://github.com/edx/edx-platform.git',
+    ('edx', 'credentials'),
+    ('edx', 'course-discovery'),
+    ('edx', 'ecommerce'),
+    ('edx', 'programs'),
+    ('edx', 'edx-analytics-data-api'),
+    ('edx', 'edx-analytics-dashboard'),
+    ('edx', 'xqueue'),
+    ('edx', 'edx-platform'),
 )
 
-# Here's where we'll clone the repos.
-TEMP_DIRECTORY = 'git_tmp'
+# Format to convert the repos above to an HTTPS url.
+REPO_URL_FORMAT = 'https://github.com/{}/{}'
 
-RELEASE_UTIL_REPO_NAME = 'edx-django-release-util'
 
 
 class GitHubApiUtils(object):
     """
     Class to query/set GitHub info.
     """
-    def __init__(self, repo_id):
+    def __init__(self, owner, repo_name):
         """
         Returns a GitHub object, possibly authed as a user.
         """
         token = os.environ.get('GITHUB_TOKEN', '')
-        username = os.environ.get('GITHUB_USERNAME', '')
-        password = os.environ.get('GITHUB_PASSWORD', '')
         if len(token):
-            self.gh = github.Github(login_or_token=token)
-        elif len(username) and len(password):
-            self.gh = github.Github(login_or_token=username, password=password)
+            self.gh = github3.login(token=token)
         else:
-            # No auth available - use the API anonymously.
-            self.gh = github.Github()
-        self.repo = self.gh.get_repo(repo_id)
+            self.gh = github3.GitHub()
+        self.repo = self.gh.repository(owner, repo_name)
 
     def create_pull(self, *args, **kwargs):
         return self.repo.create_pull(*args, **kwargs)
 
 
 @click.command()
-@click.option("--new_version", help="New version of edx-django-release-util.", type=str, required=True)
-def bump_repos_version(new_version):
+@click.option("--module_name", help="Name of Python module which is being updated.", type=str, required=True)
+@click.option("--new_version", help="Updated version of Python module.", type=str, required=True)
+def bump_repos_version(module_name, new_version):
     """
     Changes the pinned version number in the requirements files of all repos
-    which have edx-django-release-util as a dependency.
+    which have the specified Python module as a dependency.
 
-    This script assumes the following environment variables are set for GitHub authentication:
-    Either: GITHUB_TOKEN -or- GITHUB_USERNAME & GITHUB_PASSWORD.
+    This script assumes that GITHUB_TOKEN is set for GitHub authentication.
     """
     # Make the cloning directory and change directories into it.
     original_dir = os.getcwd()
-    if not os.path.exists(TEMP_DIRECTORY):
-        os.makedirs(TEMP_DIRECTORY)
-    os.chdir(TEMP_DIRECTORY)
-    tmp_dir = os.getcwd()
+    tmp_dir = tempfile.mkdtemp(dir=os.getcwd())
 
     # Iterate through each repository.
-    for repo in REPOS_TO_CHANGE:
-        repo_pattern = re.compile(r'^https://github.com/edx/(.+).git$')
-        repo_name = repo_pattern.match(repo).groups()[0]
+    for owner, repo_name in REPOS_TO_CHANGE:
+        repo_url = REPO_URL_FORMAT.format(owner, repo_name)
 
-        gh = GitHubApiUtils('edx/{}'.format(repo_name))
+        gh = GitHubApiUtils(owner, repo_name)
+
+        os.chdir(tmp_dir)
 
         # Clone the repo.
-        ret_code = subprocess.call(['git', 'clone', repo])
+        ret_code = subprocess.call(['git', 'clone', '{}.git'.format(repo_url)])
         if ret_code:
-            err_msg = "Failed to clone repo {}".format(repo)
-            logging.error(err_msg)
-            raise Exception(err_msg)
+            logging.error('Failed to clone repo {}'.format(repo_url))
+            continue
 
         # Change into the cloned repo dir.
         os.chdir(repo_name)
 
         # Create a branch, using the version number.
-        branch_name = '{}/{}'.format(RELEASE_UTIL_REPO_NAME, new_version)
+        branch_name = '{}/{}'.format(module_name, new_version)
         ret_code = subprocess.call(['git', 'checkout', '-b', branch_name])
         if ret_code:
-            err_msg = "Failed to create branch in repo {}".format(repo)
-            logging.error(err_msg)
-            raise Exception(err_msg)
+            logging.error('Failed to create branch in repo {}'.format(repo_url))
+            continue
 
-        # Search through all TXT files to find all lines with edx-django-release-util, changing the pinned version.
+        # Search through all TXT files to find all lines with the module name, changing the pinned version.
+        files_changed = False
         for root, dirs, files in os.walk('.'):
             for file in files:
-                if file.endswith('.txt'):
+                if file.endswith('.txt') and (('requirements' in file) or ('requirements' in root)):
                     found = False
                     filepath = os.path.join(root, file)
                     with open(filepath) as f:
-                        if '{}=='.format(RELEASE_UTIL_REPO_NAME) in f.read():
+                        if '{}=='.format(module_name) in f.read():
                             found = True
                     if found:
+                        files_changed = True
                         # Change the file in-place.
                         for line in fileinput.input(filepath, inplace=True):
-                            if '{}=='.format(RELEASE_UTIL_REPO_NAME) in line:
-                                print '{}=={}'.format(RELEASE_UTIL_REPO_NAME, new_version)
+                            if '{}=='.format(module_name) in line:
+                                print '{}=={}'.format(module_name, new_version)
                             else:
                                 print line,
 
+        if not files_changed:
+            # Module name wasn't found in the requirements files.
+            logging.error("Module name '{}' not found in repo {} - skipping.".format(module_name, repo_url))
+            continue
+
         # Add/commit the files.
-        ret_code = subprocess.call(['git', 'commit', '-am', 'Updating {} requirement to version {}'.format(RELEASE_UTIL_REPO_NAME, new_version)])
+        ret_code = subprocess.call(['git', 'commit', '-am', 'Updating {} requirement to version {}'.format(module_name, new_version)])
         if ret_code:
-            err_msg = "Failed to add and commit changed files to repo {}".format(repo)
-            logging.error(err_msg)
-            raise Exception(err_msg)
+            logging.error("Failed to add and commit changed files to repo {}".format(repo_url))
+            continue
 
         # Push the branch.
         ret_code = subprocess.call(['git', 'push', '--set-upstream', 'origin', branch_name])
         if ret_code:
-            err_msg = "Failed to push branch {} upstream for repo {}".format(branch_name, repo)
-            logging.error(err_msg)
-            raise Exception(err_msg)
+            logging.error("Failed to push branch {} upstream for repo {}".format(branch_name, repo_url))
+            continue
 
         # Create a PR with an automated message.
+        rollback_branch_push = False
         try:
             response = gh.create_pull(
-                title='Change {} version.'.format(RELEASE_UTIL_REPO_NAME),
-                body='Change the required version of {} to {}.\n\n@edx-ops/pipeline-team Please review and tag appropriate parties.'.format(RELEASE_UTIL_REPO_NAME, new_version),
+                title='Change {} version.'.format(module_name),
+                body='Change the required version of {} to {}.\n\n@edx-ops/pipeline-team Please review and tag appropriate parties.'.format(module_name, new_version),
                 head=branch_name,
                 base='master'
             )
         except UnknownObjectException:
-            logging.error('No GitHub PR-creating permissions - did you set GITHUB_TOKEN or GITHUB_USERNAME/PASSWORD?')
+            logging.error('No GitHub PR-creating permissions - did you set GITHUB_TOKEN?')
+            rollback_branch_push = True
         except:
-            logging.error('Failed to create PR for repo {}!'.format(repo))
+            logging.error('Failed to create PR for repo {}!'.format(repo_url))
+            rollback_branch_push = True
         else:
-            logging.info('Created PR for repo {}: {}'.format(repo, response.html_url))
+            logging.info('Created PR for repo {}: {}'.format(repo_url, response.html_url))
 
-        # Change directory back up to tmp directory.
-        os.chdir(tmp_dir)
+        if rollback_branch_push:
+            ret_code = subprocess.call(['git', 'push', 'origin', '--delete', branch_name])
+            if ret_code:
+                logging.error("ROLLBACK: Failed to delete upstream branch {} for repo {}".format(branch_name, repo_url))
 
-    # Change directory back to script level and delete the temp git-cloning directory.
-    os.chdir(original_dir)
     shutil.rmtree(tmp_dir)
 
 if __name__ == "__main__":
