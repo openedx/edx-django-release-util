@@ -364,7 +364,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="run_migrations",
                 cmd_args=(in_file.name,),
                 cmd_kwargs={'output_file': out_file.name},
-                output=migration_output, #failure_outputs[migration_idx],
+                output=migration_output,
                 err_output="Migration error: Migration failed for app 'release_util' - migration '{}'.".format(migration_name),
                 exit_value=1
             )
