@@ -1,12 +1,14 @@
 import contextlib
 import tempfile
 
+import ddt
 import six
 import yaml
 from django.core.management import call_command, CommandError
 from django.db.migrations.state import ProjectState
 from django.test import TransactionTestCase
 from mock import patch
+import release_util.tests.migrations.test_migrations
 
 
 @contextlib.contextmanager
@@ -39,6 +41,7 @@ def remove_and_restore_models(apps):
         ProjectState.from_apps = old_from_apps
 
 
+@ddt.ddt
 class MigrationCommandsTests(TransactionTestCase):
     """
     Tests running the management commands related to migrations.
@@ -74,13 +77,13 @@ class MigrationCommandsTests(TransactionTestCase):
             self.assertTrue(exit_mock.called)
             exit_mock.assert_called_once_with(exit_value)
         # Check command output.
-        if cmd in ('show_unapplied_migrations', 'run_migrations'):
+        if cmd.startswith(('show_unapplied_migrations', 'run_migrations')):
             parsed_yaml = yaml.safe_load(out.getvalue())
             self.assertTrue(isinstance(parsed_yaml, dict))
             if cmd == 'show_unapplied_migrations':
                 # Ensure the command output is parsable as YAML -and- is exactly the expected YAML.
                 self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
-            elif cmd == 'run_migrations':
+            elif cmd.startswith('run_migrations'):
                 # Don't compare all the fields - some fields will have variable output values.
                 parsed_yaml = self._null_certain_fields(parsed_yaml)
                 self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
@@ -193,7 +196,8 @@ class MigrationCommandsTests(TransactionTestCase):
             output="Checking...All migration files present.",
         )
 
-    def test_run_migrations_success(self):
+    @ddt.data("run_migrations", "run_migrations_one_by_one")
+    def test_run_migrations_success(self, migration_cmd):
         """
         Test the migration success path.
         """
@@ -235,7 +239,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         # Check the stdout output against the expected output.
         self._check_command_output(
-            cmd="run_migrations",
+            cmd=migration_cmd,
             cmd_args=(in_file.name,),
             cmd_kwargs={'output_file': out_file.name},
             output=output,
@@ -251,9 +255,79 @@ class MigrationCommandsTests(TransactionTestCase):
         self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
         out_file.close()
 
-    def test_run_migrations_failure(self):
+    @ddt.data(
+        (
+            '0001_initial',
+            {
+                'success': [],
+                'failure': {
+                    'migration': ['release_util', '0001_initial'],
+                    'duration': None,
+                    'output': None,
+                    'traceback': None,
+                },
+                'unapplied': [
+                    ['release_util', '0002_second'],
+                    ['release_util', '0003_third'],
+                ],
+                'rollback_commands': [
+                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
+                ],
+            },
+        ),
+        (
+            '0002_second',
+            {
+                'success': [
+                    {
+                        'migration': ['release_util', '0001_initial'],
+                        'output': None
+                    },
+                ],
+                'failure': {
+                    'migration': ['release_util', '0002_second'],
+                    'duration': None,
+                    'output': None,
+                    'traceback': None,
+                },
+                'unapplied': [
+                    ['release_util', '0003_third'],
+                ],
+                'rollback_commands': [
+                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
+                ],
+            },
+        ),
+        (
+            '0003_third',
+            {
+                'success': [
+                    {
+                        'migration': ['release_util', '0001_initial'],
+                        'output': None
+                    },
+                    {
+                        'migration': ['release_util', '0002_second'],
+                        'output': None
+                    },
+                ],
+                'failure': {
+                    'migration': ['release_util', '0003_third'],
+                    'duration': None,
+                    'output': None,
+                    'traceback': None,
+                },
+                'unapplied': [],
+                'rollback_commands': [
+                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
+                ],
+            },
+        ),
+    )
+    @ddt.unpack
+    def test_run_migrations_failure(self, migration_name, migration_output):
         """
-        Test the first migration failing.
+        Test the first, second, and last migration failing.
         """
         # Using TransactionTestCase sets up the migrations as set up for the test.
         # Reset the release_util migrations to the very beginning - i.e. no tables.
@@ -263,40 +337,40 @@ class MigrationCommandsTests(TransactionTestCase):
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
+          - [release_util, 0003_third]
         initial_states:
           - [release_util, zero]
         """
-        output = {
-            'success': [],
-            'failure': {
-                'migration': ['release_util', '0001_initial'],
-                'duration': None,
-                'output': None,
-                'traceback': None,
-            },
-            'unapplied': [
-                ['release_util', '0002_second'],
-            ],
-            'rollback_commands': [
-                ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
-            ],
-        }
-
         out_file = tempfile.NamedTemporaryFile(suffix='.yml')
         in_file = tempfile.NamedTemporaryFile(suffix='.yml')
         in_file.write(input_yaml.encode('utf-8'))
         in_file.flush()
 
-        with patch('django.core.management.commands.migrate.Command.handle') as handle_mock:
-            handle_mock.side_effect = CommandError("BIG ERROR!")
+        # A bogus class for creating a migration object that will raise a CommandError.
+        class MigrationFail(object):
+            atomic = False
+            def state_forwards(self, app_label, state):
+                pass
+            def database_forwards(self, app_label, schema_editor, from_state, to_state):
+                raise CommandError("Yo")
+
+        # Insert the bogus object into the first operation of a migration.
+        current_migration_list = release_util.tests.migrations.test_migrations.__dict__[migration_name].__dict__['Migration'].operations
+        current_migration_list.insert(0, MigrationFail())
+
+        try:
             # Check the stdout output.
             self._check_command_output(
                 cmd="run_migrations",
                 cmd_args=(in_file.name,),
                 cmd_kwargs={'output_file': out_file.name},
-                output=output,
-                err_output="Migration error: Migration failed for app 'release_util' - migration '0001_initial'.",
+                output=migration_output, #failure_outputs[migration_idx],
+                err_output="Migration error: Migration failed for app 'release_util' - migration '{}'.".format(migration_name),
                 exit_value=1
             )
+        finally:
+            # Whether the test passes or fails, always pop the failure migration of the list.
+            current_migration_list.pop(0)
+
         in_file.close()
         out_file.close()

@@ -8,6 +8,9 @@ from release_util.management.commands import MigrationSession
 
 class Command(BaseCommand):
     """
+    WARNING: This command is DEPRECATED and will be removed in a future release!
+    Use the run_migrations.py command instead.
+
     Given a YAML file containing apps and migrations, apply those app migrations.
     The YAML format for the apps/migrations is:
 
@@ -31,12 +34,11 @@ class Command(BaseCommand):
 
     success:
     - migration: [app1, 0001_initial]
-      output: Applying app1.0001_initial... OK
+      duration: 3.45
+      output: All good!
     failure:
       migration: [app2, 0012_otherthing]
-      duration: 43.39
-      output: <All migration output>
-      traceback: <Entire traceback>
+      output: This migration has failed!!!!
     unapplied:
     - [app1, 0002_something]
     rollback_commands:
@@ -75,7 +77,7 @@ class Command(BaseCommand):
 
         failure = False
         try:
-            migrator.apply_all_together()
+            migrator.apply_all_one_by_one()
         except CommandError as e:
             self.stderr.write("Migration error: {}".format(e))
             failure = True

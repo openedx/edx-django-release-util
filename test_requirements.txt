@@ -1,3 +1,4 @@
+ddt
 django-nose
 mock
 nose
