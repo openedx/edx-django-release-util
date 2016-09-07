@@ -75,7 +75,7 @@ class Command(BaseCommand):
 
         failure = False
         try:
-            migrator.apply_all_together()
+            migrator.apply_all()
         except CommandError as e:
             self.stderr.write("Migration error: {}".format(e))
             failure = True

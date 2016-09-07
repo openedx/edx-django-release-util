@@ -189,9 +189,9 @@ class MigrationSession(object):
             self._apply_next()
         self._add_rollback_commands()
 
-    def apply_all_together(self):
+    def apply_all(self):
         """
-        Apply all the migrations, executing all migrations together.
+        Apply all the migrations together.
         """
         self._apply_all()
         self._add_rollback_commands()
