@@ -1,3 +1,4 @@
+import sys
 import contextlib
 import tempfile
 
@@ -9,6 +10,7 @@ from django.db.migrations.state import ProjectState
 from django.test import TransactionTestCase
 from mock import patch
 import release_util.tests.migrations.test_migrations
+from release_util.management.commands import MigrationSession
 
 
 @contextlib.contextmanager
@@ -443,3 +445,21 @@ class MigrationCommandsTests(TransactionTestCase):
 
         in_file.close()
         out_file.close()
+
+    @ddt.data(
+        ('Applying app1.9999_final... OK', True, True),
+        ('Applying crazy_app.11111111_n_e_w_f_i_e_l_d... ', True, False),
+        ('Applying .0001_dot_with_no_app... ', False, False),
+        ('Applying 0001_no_app... ', False, False),
+        ('Applying testapp.0001_copious_space_b4_OK...                    OK', True, True),
+        ('Applying testapp.0001_no_space_between_dot_and_OK...OK', True, True),
+        ('Applying testapp.0001_lowercase_OK... ok', False, False),
+        ('Applying testapp.amigration_with_no_number... ', True, False),
+    )
+    @ddt.unpack
+    def test_migration_regex(self, status_string, is_match, success):
+        migrator = MigrationSession(sys.stderr, 'default')
+        match = migrator.migration_regex.match(status_string)
+        self.assertEqual(is_match, match is not None)
+        if match:
+            self.assertEqual(success, match.group('success') == 'OK')
