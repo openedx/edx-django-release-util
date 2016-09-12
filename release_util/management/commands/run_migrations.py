@@ -53,7 +53,7 @@ class Command(BaseCommand):
             'input_file',
             type=str,
             nargs='?',
-            help="Filename from which apps/migrations will be read."
+            help="DEPRECATED (unused): Filename from which apps/migrations will be read."
         )
         parser.add_argument(
             '--database',
@@ -69,9 +69,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        with open(kwargs['input_file'], 'r') as f:
-            input_yaml = f.read()
-        migrator = MigrationSession(input_yaml, self.stderr, kwargs['database'])
+        migrator = MigrationSession(self.stderr, kwargs['database'])
 
         failure = False
         try:

@@ -3,7 +3,7 @@ import sys
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
-from release_util.management.commands import MigrationSession
+from release_util.management.commands import MigrationSessionDeprecated
 
 
 class Command(BaseCommand):
@@ -73,7 +73,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         with open(kwargs['input_file'], 'r') as f:
             input_yaml = f.read()
-        migrator = MigrationSession(input_yaml, self.stderr, kwargs['database'])
+        migrator = MigrationSessionDeprecated(input_yaml, self.stderr, kwargs['database'])
 
         failure = False
         try:

@@ -63,6 +63,7 @@ class MigrationCommandsTests(TransactionTestCase):
         for migration_data in status['success']:
             _null_migration_values(migration_data)
         _null_migration_values(status['failure'])
+        _null_migration_values(status)
         return status
 
     def _check_command_output(self, cmd, cmd_args=(), cmd_kwargs={}, output='', err_output='', exit_value=0):
@@ -75,7 +76,8 @@ class MigrationCommandsTests(TransactionTestCase):
         with patch('sys.exit') as exit_mock:
             call_command(cmd, stdout=out, stderr=err, verbosity=0, *cmd_args, **cmd_kwargs)
             self.assertTrue(exit_mock.called)
-            exit_mock.assert_called_once_with(exit_value)
+            if cmd.startswith('show_unapplied_migrations'):
+                exit_mock.assert_called_once_with(exit_value)
         # Check command output.
         if cmd.startswith(('show_unapplied_migrations', 'run_migrations')):
             parsed_yaml = yaml.safe_load(out.getvalue())
@@ -196,9 +198,9 @@ class MigrationCommandsTests(TransactionTestCase):
             output="Checking...All migration files present.",
         )
 
-    @ddt.data("run_migrations", "run_migrations_one_by_one")
-    def test_run_migrations_success(self, migration_cmd):
+    def test_run_migrations_success_one_by_one(self):
         """
+        DEPRECATED:
         Test the migration success path.
         """
         # Using TransactionTestCase sets up the migrations as set up for the test.
@@ -209,6 +211,7 @@ class MigrationCommandsTests(TransactionTestCase):
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
+          - [release_util, 0003_third]
         initial_states:
           - [release_util, zero]
         """
@@ -221,6 +224,11 @@ class MigrationCommandsTests(TransactionTestCase):
                 },
                 {
                     'migration': ['release_util', '0002_second'],
+                    'duration': None,
+                    'output': None
+                },
+                {
+                    'migration': ['release_util', '0003_third'],
                     'duration': None,
                     'output': None
                 },
@@ -239,7 +247,69 @@ class MigrationCommandsTests(TransactionTestCase):
 
         # Check the stdout output against the expected output.
         self._check_command_output(
-            cmd=migration_cmd,
+            cmd='run_migrations_one_by_one',
+            cmd_args=(in_file.name,),
+            cmd_kwargs={'output_file': out_file.name},
+            output=output,
+        )
+        in_file.close()
+
+        # Check the contents of the output file against the expected output.
+        with open(out_file.name, 'r') as f:
+            output_yaml = f.read()
+        parsed_yaml = yaml.safe_load(output_yaml)
+        self.assertTrue(isinstance(parsed_yaml, dict))
+        parsed_yaml = self._null_certain_fields(parsed_yaml)
+        self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
+        out_file.close()
+
+    def test_run_migrations_success(self):
+        """
+        Test the migration success path.
+        """
+        # Using TransactionTestCase sets up the migrations as set up for the test.
+        # Reset the release_util migrations to the very beginning - i.e. no tables.
+        call_command("migrate", "release_util", "zero", verbosity=0)
+
+        input_yaml = """
+        migrations:
+          - [release_util, 0001_initial]
+          - [release_util, 0002_second]
+          - [release_util, 0003_third]
+        initial_states:
+          - [release_util, zero]
+        """
+        output = {
+            'success': [
+                {
+                    'migration': ['release_util', '0001_initial'],
+                    'output': None
+                },
+                {
+                    'migration': ['release_util', '0002_second'],
+                    'output': None
+                },
+                {
+                    'migration': ['release_util', '0003_third'],
+                    'output': None
+                },
+            ],
+            'failure': None,
+            'unapplied': [],
+            'rollback_commands': [
+                ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
+            ],
+            'duration': None,
+        }
+
+        out_file = tempfile.NamedTemporaryFile(suffix='.yml')
+        in_file = tempfile.NamedTemporaryFile(suffix='.yml')
+        in_file.write(input_yaml.encode('utf-8'))
+        in_file.flush()
+
+        # Check the stdout output against the expected output.
+        self._check_command_output(
+            cmd='run_migrations',
             cmd_args=(in_file.name,),
             cmd_kwargs={'output_file': out_file.name},
             output=output,
@@ -262,7 +332,6 @@ class MigrationCommandsTests(TransactionTestCase):
                 'success': [],
                 'failure': {
                     'migration': ['release_util', '0001_initial'],
-                    'duration': None,
                     'output': None,
                     'traceback': None,
                 },
@@ -273,6 +342,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 'rollback_commands': [
                     ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
                 ],
+                'duration': None,
             },
         ),
         (
@@ -286,7 +356,6 @@ class MigrationCommandsTests(TransactionTestCase):
                 ],
                 'failure': {
                     'migration': ['release_util', '0002_second'],
-                    'duration': None,
                     'output': None,
                     'traceback': None,
                 },
@@ -296,6 +365,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 'rollback_commands': [
                     ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
                 ],
+                'duration': None,
             },
         ),
         (
@@ -313,7 +383,6 @@ class MigrationCommandsTests(TransactionTestCase):
                 ],
                 'failure': {
                     'migration': ['release_util', '0003_third'],
-                    'duration': None,
                     'output': None,
                     'traceback': None,
                 },
@@ -321,6 +390,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 'rollback_commands': [
                     ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
                 ],
+                'duration': None,
             },
         ),
     )

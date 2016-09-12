@@ -11,8 +11,9 @@ from django.db.utils import DatabaseError
 from six import StringIO
 
 
-class MigrationSession(object):
+class MigrationSessionDeprecated(object):
     """
+    DEPRECATED:
     Class which is initialized with Django app/model migrations to perform.
     Performs migrations while keeping track of the state of each migration.
     Provides the state of all migrations on demand.
@@ -115,6 +116,91 @@ class MigrationSession(object):
             'output': out.getvalue(),
         })
 
+    def apply_all_one_by_one(self):
+        """
+        DEPRECATED:
+        Apply all the migrations, executing each migration individually.
+        """
+        while self.more_to_apply():
+            self._apply_next()
+        self._add_rollback_commands()
+
+    def state(self):
+        """
+        Returns the current state as a YAML string.
+        """
+        return yaml.dump(self.migration_state)
+
+
+class MigrationSession(object):
+    """
+    Class which is initialized with Django app/model migrations to perform.
+    Performs migrations while keeping track of the state of each migration.
+    Provides the state of all migrations on demand.
+    """
+    def __init__(self, stderr, database_name):
+        self.to_apply = []
+        self.migration_state = {
+            'success': [],
+            'failure': None,
+            'unapplied': [],
+            'rollback_commands': [],
+        }
+        self.timer = default_timer
+        self.stderr = stderr
+        self.database_name = database_name
+
+        # Execute command to find/record the unapplied migrations.
+        out = StringIO()
+        call_command("show_unapplied_migrations",
+                     interactive=False,
+                     stdout=out,
+                     database=self.database_name)
+
+        # Load the passed-in YAML into a dictionary.
+        self.input_migrations = yaml.safe_load(out.getvalue())
+
+        # Build a list of migrations that will be applied.
+        for migration in self.input_migrations['migrations']:
+            self.to_apply.append(migration)
+
+        # Regex built to match migration output like this line:
+        #    Applying release_util.0001_initial...  OK
+        self.migration_regex = re.compile(r'Applying (?P<app_name>[^\.]+)\.(?P<migration_name>[^\.]+)[\. ]+(?P<success>[OK]*)$')
+
+    def more_to_apply(self):
+        """
+        Returns True if more migrations remain to apply in this session, else False.
+        """
+        return len(self.to_apply) > 0
+
+    def _add_rollback_commands(self):
+        """
+        Generate rollback commands for the apps that have had migrations applied.
+        If an app's migration has failed, include that rollback command as well.
+        """
+        apps_to_rollback = set()
+        # Add the apps with successfully applied migrations.
+        apps_to_rollback.update([m['migration'][0] for m in self.migration_state['success']])
+        # If an app migration failed, include that rollback also.
+        if self.migration_state['failure']:
+            apps_to_rollback.add(self.migration_state['failure']['migration'][0])
+        for app in apps_to_rollback:
+            initial_app_state = None
+            for initial in self.input_migrations['initial_states']:
+                if app == initial[0]:
+                    initial_app_state = initial
+                    break
+            if not initial_app_state:
+                raise CommandError('App "{}" not found in initial migration states.'.format(app))
+            self.migration_state['rollback_commands'].append(
+                [
+                    'python', 'manage.py', 'migrate',
+                    app,
+                    initial_app_state[1]
+                ]
+            )
+
     def _apply_all(self):
         """
         Applies all Django model migrations at once, recording the result.
@@ -139,60 +225,66 @@ class MigrationSession(object):
             # - before exception migration as success
             # - exception migration as failed
             # - any remaining exceptions as unapplied
-            # Use the initialized list of migrations to determine the ordering.
             for line in out.getvalue().split('\n'):
                 line = _remove_escape_characters(line).strip()
-                if line.startswith('Applying'):
-                    if line.endswith('OK'):
+                line_match = self.migration_regex.match(line)
+                if line_match:
+                    migration = [line_match.group('app_name'), line_match.group('migration_name')]
+                    if line_match.group('success') == 'OK':
                         # A migration succeeded.
-                        app, migration = self.to_apply.pop(0)
                         self.migration_state['success'].append({
-                            'migration': [app, migration],
+                            'migration': migration,
                             'output': line,
                         })
                     else:
                         # This migration failed.
-                        failed_app, failed_migration = self.to_apply.pop(0)
+                        failed_app, failed_migration = migration
                         self.migration_state['failure'] = {
-                            'migration': [failed_app, failed_migration],
-                            'duration': time_to_fail,
+                            'migration': migration,
                             'output': out.getvalue(),
                             'traceback': repr(traceback.format_exception(exc_type, exc_value, exc_traceback)),
                         }
+                        # Save the total migration time until failure.
+                        self.migration_state['duration'] = time_to_fail
                         break
+
+            # Remove any migrations that succeeded -or- failed.
             # Any leftover migrations were *not* applied.
-            while self.more_to_apply():
-                app_migration = self.to_apply.pop(0)
-                self.migration_state['unapplied'].append(app_migration)
+            succeeded = [status['migration'] for status in self.migration_state['success']]
+            failed = []
+            if failed_app and failed_migration:
+                failed = [failed_app, failed_migration]
+            for migration in self.to_apply:
+                if migration not in succeeded and migration != failed:
+                    self.migration_state['unapplied'].append(migration)
 
             # Find the apps that have been applied -or- failed.
             # Include their initial migrations as commands.
             self._add_rollback_commands()
             raise CommandError("Migration failed for app '{}' - migration '{}'.\n".format(failed_app, failed_migration))
 
-        # All migrations succeeded.
+        # All migrations succeeded. Record the total time for all migrations.
         time_to_apply = self.timer() - start
-        while self.to_apply:
-            app, migration = self.to_apply.pop(0)
-            self.migration_state['success'].append({
-                'migration': [app, migration],
-                'duration': time_to_apply,
-                'output': out.getvalue(),
-            })
+        self.migration_state['duration'] = time_to_apply
 
-    def apply_all_one_by_one(self):
-        """
-        DEPRECATED:
-        Apply all the migrations, executing each migration individually.
-        """
-        while self.more_to_apply():
-            self._apply_next()
-        self._add_rollback_commands()
+        # Parse the output to find all migrations that were applied successfully.
+        for line in out.getvalue().split('\n'):
+            line = _remove_escape_characters(line).strip()
+            line_match = self.migration_regex.match(line)
+            if line_match:
+                migration = [line_match.group('app_name'), line_match.group('migration_name')]
+                if line_match.group('success') == 'OK':
+                    # A migration succeeded.
+                    self.migration_state['success'].append({
+                        'migration': migration,
+                        'output': line,
+                    })
 
     def apply_all(self):
         """
         Apply all the migrations together.
         """
+
         self._apply_all()
         self._add_rollback_commands()
 
