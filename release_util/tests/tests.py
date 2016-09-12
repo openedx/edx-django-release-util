@@ -76,8 +76,7 @@ class MigrationCommandsTests(TransactionTestCase):
         with patch('sys.exit') as exit_mock:
             call_command(cmd, stdout=out, stderr=err, verbosity=0, *cmd_args, **cmd_kwargs)
             self.assertTrue(exit_mock.called)
-            if cmd.startswith('show_unapplied_migrations'):
-                exit_mock.assert_called_once_with(exit_value)
+            exit_mock.assert_called_once_with(exit_value)
         # Check command output.
         if cmd.startswith(('show_unapplied_migrations', 'run_migrations')):
             parsed_yaml = yaml.safe_load(out.getvalue())

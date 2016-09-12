@@ -154,7 +154,8 @@ class MigrationSession(object):
         call_command("show_unapplied_migrations",
                      interactive=False,
                      stdout=out,
-                     database=self.database_name)
+                     database=self.database_name,
+                     standalone=False)
 
         # Load the passed-in YAML into a dictionary.
         self.input_migrations = yaml.safe_load(out.getvalue())

@@ -45,6 +45,12 @@ class Command(BaseCommand):
             default=None,
             help="Filename to which output should be written."
         )
+        parser.add_argument(
+            '--standalone',
+            dest='standalone',
+            default=True,
+            help="False if cmd is called from another mgmt command. True if *not* called from another mgmt command."
+        )
 
     def _gather_unapplied_migrations(self, loader):
         """
@@ -112,7 +118,8 @@ class Command(BaseCommand):
             with open(kwargs['output_file'], 'w') as outfile:
                 outfile.write(yaml_output)
 
-        if kwargs['fail_on_unapplied'] and migration_info['migrations']:
-            sys.exit(1)
-        else:
-            sys.exit(0)
+        if kwargs['standalone']:
+            if kwargs['fail_on_unapplied'] and migration_info['migrations']:
+                sys.exit(1)
+            else:
+                sys.exit(0)
