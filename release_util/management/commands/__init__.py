@@ -134,9 +134,8 @@ class MigrationSessionDeprecated(object):
 
 class MigrationSession(object):
     """
-    Class which is initialized with Django app/model migrations to perform.
-    Performs migrations while keeping track of the state of each migration.
-    Provides the state of all migrations on demand.
+    Class which performs migrations while keeping track of the state of each migration.
+    Provides the state of all migrations post-migration.
     """
     def __init__(self, stderr, database_name):
         self.to_apply = []
