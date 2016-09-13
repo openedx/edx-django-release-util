@@ -3,11 +3,14 @@ import sys
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
-from release_util.management.commands import MigrationSession
+from release_util.management.commands import MigrationSessionDeprecated
 
 
 class Command(BaseCommand):
     """
+    WARNING: This command is DEPRECATED and will be removed in a future release!
+    Use the run_migrations.py command instead.
+
     Given a YAML file containing apps and migrations, apply those app migrations.
     The YAML format for the apps/migrations is:
 
@@ -31,12 +34,11 @@ class Command(BaseCommand):
 
     success:
     - migration: [app1, 0001_initial]
-      output: Applying app1.0001_initial... OK
+      duration: 3.45
+      output: All good!
     failure:
       migration: [app2, 0012_otherthing]
-      duration: 43.39
-      output: <All migration output>
-      traceback: <Entire traceback>
+      output: This migration has failed!!!!
     unapplied:
     - [app1, 0002_something]
     rollback_commands:
@@ -53,7 +55,7 @@ class Command(BaseCommand):
             'input_file',
             type=str,
             nargs='?',
-            help="DEPRECATED (unused): Filename from which apps/migrations will be read."
+            help="Filename from which apps/migrations will be read."
         )
         parser.add_argument(
             '--database',
@@ -69,11 +71,13 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        migrator = MigrationSession(self.stderr, kwargs['database'])
+        with open(kwargs['input_file'], 'r') as f:
+            input_yaml = f.read()
+        migrator = MigrationSessionDeprecated(input_yaml, self.stderr, kwargs['database'])
 
         failure = False
         try:
-            migrator.apply_all()
+            migrator.apply_all_one_by_one()
         except CommandError as e:
             self.stderr.write("Migration error: {}".format(e))
             failure = True
