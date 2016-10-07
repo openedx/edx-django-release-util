@@ -110,7 +110,7 @@ class Command(BaseCommand):
         migration_info = self._gather_migration_info(self, *args, **kwargs)
 
         # Compose the output YAML.
-        yaml_output = yaml.dump(migration_info)
+        yaml_output = yaml.safe_dump(migration_info)
 
         # Output the composed YAML.
         self.stdout.write(yaml_output)

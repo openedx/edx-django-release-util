@@ -129,7 +129,7 @@ class MigrationSessionDeprecated(object):
         """
         Returns the current state as a YAML string.
         """
-        return yaml.dump(self.migration_state)
+        return yaml.safe_dump(self.migration_state)
 
 
 class MigrationSession(object):
@@ -292,4 +292,4 @@ class MigrationSession(object):
         """
         Returns the current state as a YAML string.
         """
-        return yaml.dump(self.migration_state)
+        return yaml.safe_dump(self.migration_state)
