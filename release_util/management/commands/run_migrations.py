@@ -4,6 +4,7 @@ from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
 from release_util.management.commands import MigrationSession
+import yaml
 
 
 class Command(BaseCommand):
@@ -26,7 +27,6 @@ class Command(BaseCommand):
     The output of the command is in YAML format and specifies the following:
         - migrations that run successfully and how long they took
         - migrations that failed and how long the failure took
-        - migrations that unapplied due to previous failures
     The output YAML format:
 
     success:
@@ -37,8 +37,6 @@ class Command(BaseCommand):
       duration: 43.39
       output: <All migration output>
       traceback: <Entire traceback>
-    unapplied:
-    - [app1, 0002_something]
     rollback_commands:
     - [python, manage.py, migrate, app1, zero]
 
@@ -78,9 +76,10 @@ class Command(BaseCommand):
             self.stderr.write("Migration error: {}".format(e))
             failure = True
 
-        self.stdout.write(migrator.state())
+        state = yaml.safe_dump(migrator.state)
+        self.stdout.write(state)
         if kwargs['output_file']:
             with open(kwargs['output_file'], 'w') as outfile:
-                outfile.write(migrator.state())
+                outfile.write(state)
 
         sys.exit(int(failure))

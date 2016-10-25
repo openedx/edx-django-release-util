@@ -2,6 +2,7 @@ import sys
 import contextlib
 import tempfile
 
+from unittest import skip
 import ddt
 import six
 import yaml
@@ -62,10 +63,8 @@ class MigrationCommandsTests(TransactionTestCase):
                     if key in ('duration', 'output', 'traceback'):
                         status[key] = None
 
-        for migration_data in status['success']:
-            _null_migration_values(migration_data)
-        _null_migration_values(status['failure'])
-        _null_migration_values(status)
+        for one_status in status:
+            _null_migration_values(one_status)
         return status
 
     def _check_command_output(self, cmd, cmd_args=(), cmd_kwargs={}, output='', err_output='', exit_value=0):
@@ -82,7 +81,10 @@ class MigrationCommandsTests(TransactionTestCase):
         # Check command output.
         if cmd.startswith(('show_unapplied_migrations', 'run_migrations')):
             parsed_yaml = yaml.safe_load(out.getvalue())
-            self.assertTrue(isinstance(parsed_yaml, dict))
+            if cmd == 'show_unapplied_migrations':
+                self.assertTrue(isinstance(parsed_yaml, dict))
+            else:
+                self.assertTrue(isinstance(parsed_yaml, list))
             if cmd == 'show_unapplied_migrations':
                 # Ensure the command output is parsable as YAML -and- is exactly the expected YAML.
                 self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
@@ -199,6 +201,7 @@ class MigrationCommandsTests(TransactionTestCase):
             output="Checking...All migration files present.",
         )
 
+    @skip('')
     def test_run_migrations_success_one_by_one(self):
         """
         DEPRECATED:
@@ -259,7 +262,7 @@ class MigrationCommandsTests(TransactionTestCase):
         with open(out_file.name, 'r') as f:
             output_yaml = f.read()
         parsed_yaml = yaml.safe_load(output_yaml)
-        self.assertTrue(isinstance(parsed_yaml, dict))
+        self.assertTrue(isinstance(parsed_yaml, list))
         parsed_yaml = self._null_certain_fields(parsed_yaml)
         self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
         out_file.close()
@@ -280,28 +283,20 @@ class MigrationCommandsTests(TransactionTestCase):
         initial_states:
           - [release_util, zero]
         """
-        output = {
-            'success': [
-                {
-                    'migration': ['release_util', '0001_initial'],
-                    'output': None
-                },
-                {
-                    'migration': ['release_util', '0002_second'],
-                    'output': None
-                },
-                {
-                    'migration': ['release_util', '0003_third'],
-                    'output': None
-                },
-            ],
-            'failure': None,
-            'unapplied': [],
-            'rollback_commands': [
-                ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
-            ],
-            'duration': None,
-        }
+        output = [
+            {
+                'duration': None,
+                'failure': None,
+                'migration': 'all',
+                'output': None,
+                'success': [
+                    ['release_util', '0001_initial'],
+                    ['release_util', '0002_second'],
+                    ['release_util', '0003_third'],
+                ],
+                'traceback': None,
+            },
+        ]
 
         out_file = tempfile.NamedTemporaryFile(suffix='.yml')
         in_file = tempfile.NamedTemporaryFile(suffix='.yml')
@@ -321,7 +316,7 @@ class MigrationCommandsTests(TransactionTestCase):
         with open(out_file.name, 'r') as f:
             output_yaml = f.read()
         parsed_yaml = yaml.safe_load(output_yaml)
-        self.assertTrue(isinstance(parsed_yaml, dict))
+        self.assertTrue(isinstance(parsed_yaml, list))
         parsed_yaml = self._null_certain_fields(parsed_yaml)
         self.assertEqual(yaml.dump(output), yaml.dump(parsed_yaml))
         out_file.close()
@@ -329,70 +324,45 @@ class MigrationCommandsTests(TransactionTestCase):
     @ddt.data(
         (
             '0001_initial',
-            {
-                'success': [],
-                'failure': {
-                    'migration': ['release_util', '0001_initial'],
+            [
+                {
+                    'failure': ['release_util', '0001_initial'],
+                    'migration': 'all',
+                    'success': [],
+                    'duration': None,
                     'output': None,
-                    'traceback': None,
-                },
-                'unapplied': [
-                    ['release_util', '0002_second'],
-                    ['release_util', '0003_third'],
-                ],
-                'rollback_commands': [
-                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
-                ],
-                'duration': None,
-            },
+                    'traceback': None
+                }
+            ],
         ),
         (
             '0002_second',
-            {
-                'success': [
-                    {
-                        'migration': ['release_util', '0001_initial'],
-                        'output': None
-                    },
-                ],
-                'failure': {
-                    'migration': ['release_util', '0002_second'],
+            [
+                {
+                    'failure': ['release_util', '0002_second'],
+                    'migration': 'all',
+                    'success': [['release_util', '0001_initial'],],
+                    'duration': None,
                     'output': None,
-                    'traceback': None,
-                },
-                'unapplied': [
-                    ['release_util', '0003_third'],
-                ],
-                'rollback_commands': [
-                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
-                ],
-                'duration': None,
-            },
+                    'traceback': None
+                }
+            ],
         ),
         (
             '0003_third',
-            {
-                'success': [
-                    {
-                        'migration': ['release_util', '0001_initial'],
-                        'output': None
-                    },
-                    {
-                        'migration': ['release_util', '0002_second'],
-                        'output': None
-                    },
-                ],
-                'failure': {
-                    'migration': ['release_util', '0003_third'],
+            [
+                {
+                    'failure': ['release_util', '0003_third'],
+                    'migration': 'all',
+                    'success': [
+                        ['release_util', '0001_initial'],
+                        ['release_util', '0002_second'],
+                    ],
+                    'duration': None,
                     'output': None,
-                    'traceback': None,
-                },
-                'unapplied': [],
-                'rollback_commands': [
-                    ['python', 'manage.py', 'migrate', 'release_util', 'zero'],
-                ],
-                'duration': None,
-            },
+                    'traceback': None
+                }
+            ],
         ),
     )
     @ddt.unpack
