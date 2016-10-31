@@ -3,6 +3,7 @@ Common release_util code used by management commands.
 """
 import re
 import sys
+from copy import deepcopy
 import traceback
 from timeit import default_timer
 import yaml
@@ -133,6 +134,39 @@ class MigrationSessionDeprecated(object):
         """
         return yaml.safe_dump(self.migration_state)
 
+def dump_migration_session_state(raw):
+    """
+    Serialize a migration session state to yaml using nicer formatting
+
+    Args:
+        raw: object to serialize
+    Returns: string (of yaml)
+
+    Specifically, this forces the "output" member of state step dicts (e.g.
+    state[0]['output']) to use block formatting. For example, rather than this:
+
+    - migration: [app, migration_name]
+      output: "line 1\nline2\nline3"
+
+    You get this:
+
+    - migration: [app, migration_name]
+      output: |
+        line 1
+        line 2
+        line 3
+    """
+    class BlockStyle(str): pass
+    class SessionDumper(yaml.SafeDumper): pass
+    def str_block_formatter(dumper, data):
+        return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+    SessionDumper.add_representer(BlockStyle, str_block_formatter)
+
+    raw = deepcopy(raw)
+    for step in raw:
+        step['output'] = BlockStyle(step['output'])
+        step['traceback'] = BlockStyle(step['traceback'])
+    return yaml.dump(raw, Dumper=SessionDumper)
 
 def _remove_escape_characters(s):
     """

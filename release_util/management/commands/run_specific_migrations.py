@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
-from release_util.management.commands import MigrationSession
-import sys, yaml
+from release_util.management.commands import MigrationSession, dump_migration_session_state
+import sys
 
 class Command(BaseCommand):
     """docstring"""
@@ -40,7 +40,7 @@ class Command(BaseCommand):
             self.stderr.write("Migration error: {}".format(e))
             failure = True
 
-        state = yaml.safe_dump(migrator.state)
+        state = dump_migration_session_state(migrator.state)
         self.stdout.write(state)
         if kwargs['output_file']:
             with open(kwargs['output_file'], 'w') as outfile:
