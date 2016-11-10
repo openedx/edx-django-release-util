@@ -286,15 +286,16 @@ class MigrationCommandsTests(TransactionTestCase):
         output = [
             {
                 'duration': None,
-                'failure': None,
+                'failed_migration': None,
                 'migration': 'all',
                 'output': None,
-                'success': [
+                'succeeded_migrations': [
                     ['release_util', '0001_initial'],
                     ['release_util', '0002_second'],
                     ['release_util', '0003_third'],
                 ],
                 'traceback': None,
+                'succeeded': True,
             },
         ]
 
@@ -326,12 +327,13 @@ class MigrationCommandsTests(TransactionTestCase):
             '0001_initial',
             [
                 {
-                    'failure': ['release_util', '0001_initial'],
+                    'failed_migration': ['release_util', '0001_initial'],
                     'migration': 'all',
-                    'success': [],
+                    'succeeded_migrations': [],
                     'duration': None,
                     'output': None,
-                    'traceback': None
+                    'traceback': None,
+                    'succeeded': False,
                 }
             ],
         ),
@@ -339,12 +341,13 @@ class MigrationCommandsTests(TransactionTestCase):
             '0002_second',
             [
                 {
-                    'failure': ['release_util', '0002_second'],
+                    'failed_migration': ['release_util', '0002_second'],
                     'migration': 'all',
-                    'success': [['release_util', '0001_initial'],],
+                    'succeeded_migrations': [['release_util', '0001_initial'],],
                     'duration': None,
                     'output': None,
-                    'traceback': None
+                    'traceback': None,
+                    'succeeded': False,
                 }
             ],
         ),
@@ -352,15 +355,16 @@ class MigrationCommandsTests(TransactionTestCase):
             '0003_third',
             [
                 {
-                    'failure': ['release_util', '0003_third'],
+                    'failed_migration': ['release_util', '0003_third'],
                     'migration': 'all',
-                    'success': [
+                    'succeeded_migrations': [
                         ['release_util', '0001_initial'],
                         ['release_util', '0002_second'],
                     ],
                     'duration': None,
                     'output': None,
-                    'traceback': None
+                    'traceback': None,
+                    'succeeded': False,
                 }
             ],
         ),

@@ -195,6 +195,42 @@ class MigrationSession(object):
 
     Once either apply() or apply_all() has been called, calling apply(),
     apply_all(), or add_migrations() will raise a MigrationSessionError.
+
+    MigrationSession.state is a list of "step" dicts of the following form:
+    [
+        {
+            'migration': 'all' | (app: str, migration_name: str),
+            'duration': float,
+            'output': str,
+            'success': [(app: str, migration_name: str), ...],
+            'failure': (app: str, migration_name: str) | None,
+            'traceback': str | None,
+            'succeeded': bool,
+        },
+        ...
+    ]
+
+    migration: The tuple of the requested migration that triggered the step
+    duration:  The amount of time in seconds it took to run the step
+    output:    The stdout of the manage.py migrate command that applied the migrations
+    succeeded_migrations:
+               A list of migration tuples that succeeded
+    failed_migration:
+               The migration that failed if any
+    traceback: The traceback with which the migration failed if any
+    succeeded: Whether the step succeeded. Note a migration step can fail
+               even when all the individual migrations succeed (thus
+               traceback != None and failure == None)
+
+    Even when applied with specific migrations, there's no guarantee that no
+    other migrations will run because each migration might have dependencies.
+    Thus, MigrationSession.state is a list of "steps", where each step is a
+    single migration state that was requested.
+
+    For example, if you run MigrationSession(None, database_name, (myapp, 0003)).apply()
+    and myapp.0003 depends on myapp.0002, the state will consist of a single
+    step with "migration" == ("myapp", "0003") and (hopefully)
+    "success" = [("myapp", "0002"), ("myapp", "0003")].
     """
     def __init__(self, stderr, database_name, migrations=None):
         """
@@ -354,22 +390,26 @@ class MigrationSession(object):
         start = self._timer()
         try:
             call_command("migrate", **migrate_kwargs)
-        except (CommandError, DatabaseError):
-            trace = repr(traceback.format_exception(*sys.exc_info()))
+        except Exception:
+            trace = ''.join(traceback.format_exception(*sys.exc_info()))
+        finally:
+            end = self._timer()
+            successes, failure = self._parse_migrate_output(out.getvalue())
 
-        end = self._timer()
-        successes, failure = self._parse_migrate_output(out.getvalue())
+            self._migration_state.append({
+                'migration': 'all' if run_all else (migration[0], migration[1]),
+                'duration': end - start,
+                'output': _remove_escape_characters(out.getvalue()),
+                'succeeded_migrations': successes,        # [(app, migration), ...]
+                'failed_migration': failure,              # (app, migration)
+                'traceback': trace,
+                'succeeded': failure is None and trace is None,
+            })
 
-        self._migration_state.append({
-            'migration': 'all' if run_all else (migration[0], migration[1]),
-            'duration': end - start,
-            'output': _remove_escape_characters(out.getvalue()),
-            'success': successes,        # [(app, migration), ...]
-            'failure': failure,          # (app, migration)
-            'traceback': trace,
-        })
-        if trace is not None:
+        if failure is not None:
             raise CommandError("Migration failed for app '{}' - migration '{}'.\n".format(*failure))
+        elif trace is not None:
+            raise CommandError("Migrations failed unexpectedly. See self.state['traceback'] for details.")
 
     def apply(self):
         """
