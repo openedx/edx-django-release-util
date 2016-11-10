@@ -214,7 +214,19 @@ class MigrationSession(object):
 
         # Regex built to match migration output like this line:
         #    Applying release_util.0001_initial...  OK
-        self.migration_regex = re.compile(r'Applying (?P<app_name>[^\.]+)\.(?P<migration_name>[^\.]+)[\. ]+(?P<success>[OK]*)$')
+        # Full output will look like:
+        #     Operations to perform:
+        #       Target specific migration: 0005_alter_user_last_login_null, from auth
+        #     Running migrations:
+        #       Rendering model states... DONE
+        #       Applying contenttypes.0001_initial... OK
+        #       Applying auth.0001_initial... OK
+        #       Applying auth.0002_alter_permission_name_max_length... OK
+        #       Applying auth.0003_alter_user_email_max_length... OK
+        #       Applying auth.0004_alter_user_username_opts... OK
+        #       Applying auth.0005_alter_user_last_login_null... OK
+        # The last line might be missing the "OK" if it failed
+        self.migration_regex = re.compile(r'Applying (?P<app_name>[^.]+)\.(?P<migration_name>[^.]+)[. ]+(?P<success>(OK)?)$')
 
     def add_migrations(self, migrations):
         """

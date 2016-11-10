@@ -425,6 +425,7 @@ class MigrationCommandsTests(TransactionTestCase):
         ('Applying testapp.0001_no_space_between_dot_and_OK...OK', True, True),
         ('Applying testapp.0001_lowercase_OK... ok', False, False),
         ('Applying testapp.amigration_with_no_number... ', True, False),
+        ('Applying testapp.amigration... KOK', False, False),
     )
     @ddt.unpack
     def test_migration_regex(self, status_string, is_match, success):
