@@ -8,18 +8,7 @@ from release_util.management.commands import MigrationSession, dump_migration_se
 
 class Command(BaseCommand):
     """
-    Given a YAML file containing apps and migrations, apply those app migrations.
-    The YAML format for the apps/migrations is:
-
-    migrations:
-      - [app1, 0001_initial]
-      - [app2, 0012_otherthing]
-      - [app1, 0002_somthing]
-    initial_states:
-      - app1:
-        - zero
-      - app2:
-        - 0011_beforetheotherthing
+    Runs all migrations for a database.
 
     If an error occurs in any of the migrations, the migrations are halted at that point
         and the status is recorded in an artifact.
@@ -28,22 +17,33 @@ class Command(BaseCommand):
         - migrations that failed and how long the failure took
     The output YAML format:
 
-    success:
-    - migration: [app1, 0001_initial]
-      output: Applying app1.0001_initial... OK
-    failure:
-      migration: [app2, 0012_otherthing]
-      duration: 43.39
-      output: <All migration output>
-      traceback: <Entire traceback>
-    rollback_commands:
-    - [python, manage.py, migrate, app1, zero]
+    - migration: "all"
+      duration: float,
+      output: str,
+      success: [(app: str, migration_name: str), ...],
+      failure: ("app": str, "migration_name": str) | !!null,
+      traceback: str | !!null,
+      succeeded: bool,
+
+    migration: This will always be "all" for compatibility reasons
+    duration:  The amount of time in seconds it took to run
+    output:    The stdout of the manage.py migrate command that applied the migrations
+    succeeded_migrations:
+               A list of migration tuples that succeeded
+    failed_migration:
+               The migration that failed if any
+    traceback: The traceback with which the migration failed if any
+    succeeded: Whether the step succeeded. Note a migration step can fail
+               even when all the individual migrations succeed (thus
+               traceback != None and failure == None)
+
+    The list will always have only one item.
 
     If an output file is specified, the YAML output is also directed to that file.
 
     Rollbacks due to migration failures are left to the mgmt command user.
     """
-    help = "Given a YAML file containing apps and migrations, apply those app migrations."
+    help = "Run all migrations for a database"
 
     def add_arguments(self, parser):
         parser.add_argument(

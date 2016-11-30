@@ -4,8 +4,44 @@ from release_util.management.commands import MigrationSession, dump_migration_se
 import sys
 
 class Command(BaseCommand):
-    """docstring"""
-    help = ""
+    """
+    Runs specific migrations for a database.
+
+    If an error occurs in any of the migrations, the migrations are halted at that point
+        and the status is recorded in an artifact.
+    The output of the command is in YAML format and specifies the following:
+        - migrations that run successfully and how long they took
+        - migrations that failed and how long the failure took
+    The output YAML format:
+
+    - migration: ["app": str, "migration_name": str]
+      duration: float,
+      output: str,
+      success: [("app": str, "migration_name": str), ...],
+      failure: ("app": str, "migration_name": str) | !!null,
+      traceback: str | !!null,
+      succeeded: bool
+    ...
+
+    The list will have one item (step) for each migration specified.
+
+    migration: The tuple of the requested migration that triggered the step
+    duration:  The amount of time in seconds it took to run the step
+    output:    The stdout of the manage.py migrate command that applied the migrations
+    succeeded_migrations:
+               A list of migration tuples that succeeded
+    failed_migration:
+               The migration that failed if any
+    traceback: The traceback with which the migration failed if any
+    succeeded: Whether the step succeeded. Note a migration step can fail
+               even when all the individual migrations succeed (thus
+               traceback != None and failure == None)
+
+    If an output file is specified, the YAML output is also directed to that file.
+
+    Rollbacks due to migration failures are left to the mgmt command user.
+    """
+    help = "Run specific migrations for a database"
 
     def add_arguments(self, parser):
         parser.add_argument(
