@@ -1,14 +1,11 @@
-import sys
-
-from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
 from release_util.management.commands import MigrationSession, dump_migration_session_state
-
+import sys
 
 class Command(BaseCommand):
     """
-    Runs all migrations for a database.
+    Runs specific migrations for a database.
 
     If an error occurs in any of the migrations, the migrations are halted at that point
         and the status is recorded in an artifact.
@@ -17,16 +14,19 @@ class Command(BaseCommand):
         - migrations that failed and how long the failure took
     The output YAML format:
 
-    - migration: "all"
+    - migration: ["app": str, "migration_name": str]
       duration: float,
       output: str,
-      success: [(app: str, migration_name: str), ...],
+      success: [("app": str, "migration_name": str), ...],
       failure: ("app": str, "migration_name": str) | !!null,
       traceback: str | !!null,
-      succeeded: bool,
+      succeeded: bool
+    ...
 
-    migration: This will always be "all" for compatibility reasons
-    duration:  The amount of time in seconds it took to run
+    The list will have one item (step) for each migration specified.
+
+    migration: The tuple of the requested migration that triggered the step
+    duration:  The amount of time in seconds it took to run the step
     output:    The stdout of the manage.py migrate command that applied the migrations
     succeeded_migrations:
                A list of migration tuples that succeeded
@@ -37,20 +37,21 @@ class Command(BaseCommand):
                even when all the individual migrations succeed (thus
                traceback != None and failure == None)
 
-    The list will always have only one item.
-
     If an output file is specified, the YAML output is also directed to that file.
 
     Rollbacks due to migration failures are left to the mgmt command user.
     """
-    help = "Run all migrations for a database"
+    help = "Run specific migrations for a database"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'input_file',
+            '--migration',
             type=str,
-            nargs='?',
-            help="DEPRECATED (unused): Filename from which apps/migrations will be read."
+            nargs=2,
+            metavar=('APP', 'MIGRATION_NUMBER'),
+            action='append',
+            required=True,
+            help='App-migration pair to migrate to',
         )
         parser.add_argument(
             '--database',
@@ -66,12 +67,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        migrator = MigrationSession(self.stderr, kwargs['database'])
-
+        migrator = MigrationSession(self.stderr, kwargs['database'], migrations=kwargs['migration'])
+        
         failure = False
         try:
-            migrator.apply_all()
-        except CommandError as e:
+            migrator.apply()
+        except Exception as e:
             self.stderr.write("Migration error: {}".format(e))
             failure = True
 
