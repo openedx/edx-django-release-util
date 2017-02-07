@@ -113,6 +113,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
+                    'database': 'default',
                     'initial_states': [['release_util', 'zero']],
                     'migrations': [
                         ['release_util', '0001_initial'],
@@ -133,6 +134,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
+                    'database': 'default',
                     'initial_states': [['release_util', '0001_initial']],
                     'migrations': [
                         ['release_util', '0002_second'],
@@ -152,6 +154,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
+                    'database': 'default',
                     'initial_states': [['release_util', '0002_second']],
                     'migrations': [
                         ['release_util', '0003_third'],
@@ -170,6 +173,7 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd="show_unapplied_migrations",
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
+                    'database': 'default',
                     'initial_states': [],
                     'migrations': []
                 },
@@ -212,6 +216,7 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "zero", verbosity=0)
 
         input_yaml = """
+        database: 'default',
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
@@ -220,6 +225,7 @@ class MigrationCommandsTests(TransactionTestCase):
           - [release_util, zero]
         """
         output = {
+            'database': 'default',
             'success': [
                 {
                     'migration': ['release_util', '0001_initial'],
@@ -276,6 +282,7 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "zero", verbosity=0)
 
         input_yaml = """
+        database: 'default',
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
@@ -285,6 +292,7 @@ class MigrationCommandsTests(TransactionTestCase):
         """
         output = [
             {
+                'database': 'default',
                 'duration': None,
                 'failed_migration': None,
                 'migration': 'all',
@@ -327,6 +335,7 @@ class MigrationCommandsTests(TransactionTestCase):
             '0001_initial',
             [
                 {
+                    'database': 'default',
                     'failed_migration': ['release_util', '0001_initial'],
                     'migration': 'all',
                     'succeeded_migrations': [],
@@ -341,6 +350,7 @@ class MigrationCommandsTests(TransactionTestCase):
             '0002_second',
             [
                 {
+                    'database': 'default',
                     'failed_migration': ['release_util', '0002_second'],
                     'migration': 'all',
                     'succeeded_migrations': [['release_util', '0001_initial'],],
@@ -355,6 +365,7 @@ class MigrationCommandsTests(TransactionTestCase):
             '0003_third',
             [
                 {
+                    'database': 'default',
                     'failed_migration': ['release_util', '0003_third'],
                     'migration': 'all',
                     'succeeded_migrations': [
@@ -379,6 +390,7 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "zero", verbosity=0)
 
         input_yaml = """
+        database: 'default',
         migrations:
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
