@@ -53,7 +53,9 @@ class Command(BaseCommand):
         unapplied, current = session.list_migrations()
 
         # Compose the output YAML.
-        yaml_output = yaml.safe_dump({'migrations': unapplied, 'initial_states': current})
+        yaml_output = yaml.safe_dump(
+            {'migrations': unapplied, 'initial_states': current, 'database': kwargs['database']}
+        )
 
         # Output the composed YAML.
         self.stdout.write(yaml_output)

@@ -397,6 +397,7 @@ class MigrationSession(object):
             successes, failure = self._parse_migrate_output(out.getvalue())
 
             self._migration_state.append({
+                'database': self._database_name,
                 'migration': 'all' if run_all else (migration[0], migration[1]),
                 'duration': end - start,
                 'output': _remove_escape_characters(out.getvalue()),
