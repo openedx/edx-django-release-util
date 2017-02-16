@@ -114,11 +114,11 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
                     'database': 'default',
-                    'initial_states': [['release_util', 'zero']],
+                    'initial_states': [{'app': 'release_util', 'migration': 'zero'}],
                     'migrations': [
-                        ['release_util', '0001_initial'],
-                        ['release_util', '0002_second'],
-                        ['release_util', '0003_third'],
+                        {'app': 'release_util', 'migration': '0001_initial'},
+                        {'app': 'release_util', 'migration': '0002_second'},
+                        {'app': 'release_util', 'migration': '0003_third'},
                     ]
                 },
                 exit_value=exit_code
@@ -135,10 +135,10 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
                     'database': 'default',
-                    'initial_states': [['release_util', '0001_initial']],
+                    'initial_states': [{'app': 'release_util', 'migration': '0001_initial'}],
                     'migrations': [
-                        ['release_util', '0002_second'],
-                        ['release_util', '0003_third'],
+                        {'app': 'release_util', 'migration': '0002_second'},
+                        {'app': 'release_util', 'migration': '0003_third'},
                     ]
                 },
                 exit_value=exit_code
@@ -155,9 +155,9 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
                 output={
                     'database': 'default',
-                    'initial_states': [['release_util', '0002_second']],
+                    'initial_states': [{'app': 'release_util', 'migration': '0002_second'}],
                     'migrations': [
-                        ['release_util', '0003_third'],
+                        {'app': 'release_util', 'migration': '0003_third'},
                     ]
                 },
                 exit_value=exit_code

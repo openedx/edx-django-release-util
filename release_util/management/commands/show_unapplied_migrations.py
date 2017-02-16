@@ -54,7 +54,11 @@ class Command(BaseCommand):
 
         # Compose the output YAML.
         yaml_output = yaml.safe_dump(
-            {'migrations': unapplied, 'initial_states': current, 'database': kwargs['database']}
+            {
+                'migrations': [{'app': item[0], 'migration': item[1]} for item in unapplied],
+                'initial_states': [{'app': item[0], 'migration': item[1]} for item in current],
+                'database': kwargs['database']
+            }
         )
 
         # Output the composed YAML.
