@@ -14,12 +14,17 @@ class Command(BaseCommand):
     For example:
 
     migrations:
-      - [app1, 0001_initial]
-      - [app2, 0012_otherthing]
-      - [app1, 0002_somthing]
+      - app: app1
+        migration: 0001_initial
+      - app: app2
+        migration: 0012_otherthing
+      - app: app3
+        migration: 0002_somthing
     initial_states:
-      - [app1, zero]
-      - [app2, 0011_thisthing]
+      - app: course_modes
+        migration: 0006_auto_20160208_1407
+      - app: app2
+        migration: 001_initial
 
     If all migrations are applied, returns an empty YAML "migrations" dict.
     This command can be used in a couple of ways:
