@@ -17,7 +17,8 @@ METADATA = dict(
     license='AGPL',
     url='http://github.com/edx/edx-django-release-util',
     install_requires=[
-        'django>=1.8,<2.0',
+        'django>=1.8,<2.0;python_version<"3"',
+        'django>=1.11;python_version>"3"',
         'PyYAML>=3.11',
         'six>=1.10.0,<2.0.0',
     ],
@@ -37,10 +38,10 @@ METADATA = dict(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Framework :: Django',
-        'Framework :: Django :: 1.8',
-        'Framework :: Django :: 1.9',
-        'Framework :: Django :: 1.10',
         'Framework :: Django :: 1.11',
+        'Framework :: Django :: 2.0',
+        'Framework :: Django :: 2.1',
+        'Framework :: Django :: 2.2',
     ],
 )
 
