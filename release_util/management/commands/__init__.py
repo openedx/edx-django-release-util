@@ -191,7 +191,8 @@ class MigrationSession(object):
         This should only be called from list_migrations().
         """
         # Only care about applied migrations for the passed-in apps.
-        apps = set(apps)
+        # Remove duplicates and preserve order of the list.
+        apps = [app for index, app in enumerate(apps) if app not in apps[:index]]
         relevant_applied = [migration for migration in loader.applied_migrations if migration[0] in apps]
         # Sort them by the most recent migration and convert to a dictionary,
         # leaving apps as keys and most recent migration as values.
