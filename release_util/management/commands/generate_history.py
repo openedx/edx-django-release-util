@@ -61,7 +61,7 @@ class Command(BaseCommand):
             model = get_model(app_label, model)
 
             history_manager_name = model._meta.simple_history_manager_attribute
-            history_manager = model.history_manager_name
+            history_manager = getattr(model, history_manager_name)
             history_model = history_manager.model
 
             table = model._meta.db_table
