@@ -7,7 +7,6 @@ from datetime import datetime
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
-from simple_history.utils import get_history_model_for_model
 
 get_model = apps.get_model
 
@@ -18,7 +17,7 @@ class Command(BaseCommand):
     """
     Populate initial history for models using django-simple-history.
     Example usage:
-    $ ./manage.py lms generate_initial_history --models organizations.organization entitlements.courseentitlement --batchsize 1000 --sleep_between 1 --settings=devstack
+    $ ./manage.py lms generate_history --models organizations.organization entitlements.courseentitlement --batchsize 1000 --sleep_between 1 --settings=devstack
     """
 
     help = (
@@ -60,7 +59,10 @@ class Command(BaseCommand):
         for model_string in model_strings:
             app_label, model = model_string.split(".", 1)
             model = get_model(app_label, model)
-            history_model = get_history_model_for_model(model)
+
+            history_manager_name = model._meta.simple_history_manager_attribute
+            history_manager = model.history_manager_name
+            history_model = history_manager.model
 
             table = model._meta.db_table
             historical_table = history_model._meta.db_table
