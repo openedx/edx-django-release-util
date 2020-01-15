@@ -2,16 +2,20 @@ import sys
 import contextlib
 import tempfile
 
+from datetime import datetime
 from unittest import skip
 import ddt
 import six
 import yaml
+import release_util.management.commands.generate_history
 from django.core.management import call_command, CommandError
+from django.db import connection
 from django.db.migrations.state import ProjectState
 from django.test import TransactionTestCase
 from mock import patch
 import release_util.tests.migrations.test_migrations
 from release_util.management.commands import MigrationSession
+from release_util.tests.models import Foo, HistoricalFoo
 
 
 @contextlib.contextmanager
@@ -42,6 +46,58 @@ def remove_and_restore_models(apps):
         yield
     finally:
         ProjectState.from_apps = old_from_apps
+
+
+class GenerateHistoryTest(TransactionTestCase):
+
+    def setUp(self):
+        with connection.schema_editor() as schema_editor:
+            schema_editor.create_model(Foo)
+            schema_editor.create_model(HistoricalFoo)
+
+    def tearDown(self):
+        with connection.schema_editor() as schema_editor:
+            schema_editor.delete_model(Foo)
+            schema_editor.delete_model(HistoricalFoo)
+
+    def test_history_generation(self):
+        row1 = Foo.objects.create(name='row1')
+        row2 = Foo.objects.create(name='row2')
+        row3 = Foo.objects.create(name='row3')
+
+        rows = [row2, row3]
+
+        # A row with existing history
+        historical_row1 = HistoricalFoo.objects.create(
+            id=1,
+            name='row1',
+            history_date=datetime.today().strftime('%Y-%m-%d'),
+            history_change_reason='initial history population',
+            history_type='~',
+            history_user_id=None,
+        )
+
+        with patch.object(release_util.management.commands.generate_history.Command, 'columns_from_schema', return_value=['id', 'name']):
+            call_command('generate_history', tables=["test_app_foo"], batchsize=1)
+
+        self.assertEqual(HistoricalFoo.objects.count(), 3)
+
+        historical_rows = HistoricalFoo.objects.filter(id__in=[2,3])
+
+        for row, historical_row in zip(rows, historical_rows):
+            self.assertEqual(historical_row.id, row.id)
+            self.assertEqual(historical_row.name, row.name)
+            self.assertEqual(historical_row.history_date, datetime.today().strftime('%Y-%m-%d'))
+            self.assertEqual(historical_row.history_change_reason, 'initial history population')
+            self.assertEqual(historical_row.history_type, '+')
+            self.assertEqual(historical_row.history_user_id, None)
+
+
+        # Test no-op as all rows would now have history
+        with patch.object(release_util.management.commands.generate_history.Command, 'columns_from_schema', return_value=['id', 'name']):
+            call_command('generate_history', tables=["test_app_foo"], batchsize=1)
+
+        self.assertEqual(HistoricalFoo.objects.count(), 3)
 
 
 @ddt.ddt
