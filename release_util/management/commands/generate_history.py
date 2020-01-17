@@ -34,7 +34,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser)
 
-        parser.add_argument("--models", nargs="*", type=str)
+        parser.add_argument("--tables", nargs="*", type=str)
 
         parser.add_argument(
             '--sleep_between',
@@ -52,21 +52,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        model_strings = options.get("models", [])
+        tables = options.get("tables", [])
         increment = options['batchsize']
         sleep_between = options['sleep_between']
-
-        for model_string in model_strings:
-            app_label, model = model_string.split(".", 1)
-            model = get_model(app_label, model)
-
-            history_manager_name = model._meta.simple_history_manager_attribute
-            history_manager = getattr(model, history_manager_name)
-            history_model = history_manager.model
-
-            table = model._meta.db_table
-            historical_table = history_model._meta.db_table
-
+        print("=============================")
+        print(tables)
+        for table in tables:
+            print(table)
+            historical_table = '_historical'.join(table.rsplit('_', 1))
+            print(historical_table)
             with connection.cursor() as cursor:
                 query = u"""
                     SELECT
