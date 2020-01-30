@@ -116,8 +116,11 @@ class Command(BaseCommand):
                             """.format(
                                 table=table,
                                 historical_table=historical_table,
-                                insert_columns=','.join(columns),
-                                select_columns=','.join(['t.{}'.format(c) for c in columns]),
+                                # this cmd fails for tables containing reserved keywords in column.
+                                # https://dev.mysql.com/doc/refman/5.5/en/glossary.html
+                                # Backticked columns to avoid MYSQL errors
+                                insert_columns=','.join(['`{}`'.format(c) for c in columns]),
+                                select_columns=','.join(['t.`{}`'.format(c) for c in columns]),
                                 history_date=self.HISTORY_DATE,
                                 history_change_reason=self.HISTORY_CHANGE_REASON,
                                 history_user_id=self.HISTORY_USER_ID,
