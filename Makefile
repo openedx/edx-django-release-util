@@ -1,4 +1,4 @@
-.PHONY: clean requirements upgrade
+.PHONY: clean requirements upgrade test
 
 clean:
 	find . -name '*.pyc' -delete
