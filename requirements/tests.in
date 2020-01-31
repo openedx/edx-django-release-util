@@ -1,5 +1,7 @@
 -c constraints.txt
 
+-r base.txt
+
 ddt
 django-nose
 mock
