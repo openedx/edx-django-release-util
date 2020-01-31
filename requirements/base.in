@@ -1,0 +1,4 @@
+-c constraints.txt
+
+PyYAML>=3.11
+six>=1.10.0,<2.0.0
