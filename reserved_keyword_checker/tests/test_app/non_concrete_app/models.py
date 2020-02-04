@@ -17,14 +17,14 @@ class MixedModel(BasicModel, ModelMixin):
 
 
 class AbstractModel(models.Model):
-    x = models.CharField(max_length=20)
+    start_date = models.CharField(max_length=20)
 
     class Meta:
         abstract = True
 
 
 class ModelWithAbstractParent(AbstractModel):
-    y = models.CharField(max_length=20)
+    end_date = models.CharField(max_length=20)
 
 
 class ProxyModel(BasicModel):
