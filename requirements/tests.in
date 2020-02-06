@@ -7,4 +7,5 @@ django-nose
 mock
 nose
 path.py
+pytest
 tox
