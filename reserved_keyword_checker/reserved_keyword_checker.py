@@ -2,14 +2,15 @@
 reserved_keyword_checker.py
 
 A utility for analyzing a Django application to see if any of the model fields
-have names that are on a list of reseverd keywords. Certain tools, (i.e. Snowflake,
-Stitch) forbid the use of various column names. Modifying existing field names in a
-live Django application is a complicated, long and potentially risky operation. This
-tool allows you to prevent new fields that break these rules from being added to an
-application by loading the app and inspecting the models of both the locally defined
-apps and third party installed apps.
+have names that are on a list of reseverd keywords. Certain tools used for downstream
+data storage and analysis, like Stitch, have restrictions for which column names they
+allow. Modifying existing field names in a live Django application is a complicated,
+long and potentially risky operation. This tool allows you to prevent new fields from
+being added to the application that would break these rules. It does so by loading the
+app and inspecting the models of both the locally defined models and third party
+installed apps.
 
-example usage:
+EXAMPLE USAGE:
 
 python reserved_keyword_checker.py --reserved_keyword_file reserved_keywords.yml --override_file overrides.yml --report_path reports
 
@@ -18,9 +19,8 @@ python reserved_keyword_checker.py --reserved_keyword_file reserved_keywords.yml
 > overrides.yml: a yaml file containing a list of model fields to ignore when scanning
   for reserved keyword violations.
 > reports: a path in which to write a csv report of the violations found with this script
-
-
 """
+
 import inspect
 import io
 import re
@@ -38,10 +38,11 @@ class Violation(object):
     A Django model field name that is in conclict with a defined list of reserved keywords
     """
 
-    def __init__(self, model, field_name, system):
+    def __init__(self, model, field_name, system, override=False):
         self.model = model
         self.field = field_name
         self.system = system
+        self.override = override
 
     def __str__(self):
         return "{} conflict in {}:{}:{}.{}".format(
@@ -55,18 +56,27 @@ class Violation(object):
     def report_string(self):
         """
         Generate a comma-separated string used for creating a report of the reserved
-        keywords that were found.
+        keywords that were found. Output should be returned with the following fields:
+        - system: the system/tool that has the restriction that triggered the violation
+        - app source: was the violation detected in a locally defined or third party installed
+          application
+        - app_name: name of the Django app that contains the violation
+        - module_name: the file path of the Python module containing the violation
+        - model_name: name of the Django model that contains the violation
+        - field: the actual offending field name that triggered the violation
+        - source: is this module/model where the offending field was defined, or was it
+          inherited from another model.
         """
         model_name = self.model._meta.concrete_model.__name__
         app_name = self.model._meta.app_label
         if self.local_app:
-            app_source = "local"
+            app_source = "Local"
         else:
             app_source = "3rd party"
         if not self.inherited:
-            source = "Source"
+            source = "Defined here"
         else:
-            source = ""
+            source = "Inherited"
         return "{},{},{},{},{},{},{}".format(
             self.system, app_source, app_name, self.module_name, model_name, self.field, source
         )
@@ -108,8 +118,8 @@ class Config(object):
         if override_file:
             self.overrides = self.read_config_file(override_file)
         else:
-            self.overrides = []
-        # self.validate_override_config(override_config)
+            self.overrides = {}
+        self.validate_override_config()
         self.report_path = report_path
         self.report_file = os.path.join(report_path, "reserved_keyword_report.csv")
 
@@ -120,26 +130,26 @@ class Config(object):
             with io.open(config_file_path, 'r') as config_file:
                 config_dict = yaml.safe_load(config_file)
         except:
-            click.echo("Unable to load config file: {}".format(config_file_path))
-            sys.exit(1)
+            raise ConfigurationException("Unable to load config file: {}".format(config_file_path))
+        if not config_dict:
+            raise ConfigurationException("Config file is empty: {}".format(config_file_path))
         return config_dict
 
     def validate_override_config(self):
-        field_path_regex = re.compile(r'')
-        for pattern in self.overrides:
-            if not re.search(field_path_regex, pattern):
-                raise ConfigurationException
-
-
+        field_path_regex = re.compile(r'([A-Z]\w*\.)(\w+)')
+        for system, override_list in self.overrides.items():
+            for pattern in override_list:
+                if not re.search(field_path_regex, pattern):
+                    raise ConfigurationException("Invalid value in override file: {}".format(pattern))
 
 
 def collect_concrete_models():
     """
     Walk through all of the INSTALLED_APPS in a Django project, gathering all
     of the 'concrete' models. In this case, 'concrete' refers to the fact
-    that a model has one or more corresponding tables within a database
-    (as opposed to an abstract model, which does not). For more information,
-    see: https://openedx.atlassian.net/wiki/spaces/PLAT/pages/895287378/OEP-30+Implementation
+    that a model has a corresponding tables within a database (as opposed to
+    an abstract model, which does not). For more information, see:
+    https://openedx.atlassian.net/wiki/spaces/PLAT/pages/895287378/OEP-30+Implementation
     """
     def is_concrete(model):
         return (
@@ -149,7 +159,7 @@ def collect_concrete_models():
             not model._meta.proxy
         )
 
-    concrete_models = []
+    concrete_models = set()
 
     click.echo("Collecting all concrete models in installed apps")
     for app in django.apps.apps.get_app_configs():
@@ -162,14 +172,13 @@ def collect_concrete_models():
                 if is_concrete(model):
 
                     model_name = model._meta.object_name
-
-                    concrete_models.append(model)
+                    concrete_models.add(model)
                     app_models.append(model_name)
         if app_models:
             click.echo("Found models: {}".format(','.join(app_models)))
 
     click.echo("Collected {} concrete models".format(len(concrete_models)))
-    return concrete_models
+    return list(concrete_models)
 
 
 def get_fields_per_model(model):
@@ -196,9 +205,20 @@ def check_model_for_violations(model, config):
     for field in get_fields_per_model(model):
         for system in config.reserved_keyword_config.keys():
             if field in config.reserved_keyword_config[system]:
-                violation = Violation(model, field, system)
+                full_field_name = "{}.{}".format(
+                    model._meta.concrete_model.__name__,
+                    field
+                )
+                if system in config.overrides.keys() and full_field_name in config.overrides[system]:
+                    override = True
+                else:
+                    override = False
+                violation = Violation(model, field, system, override)
                 violations.append(violation)
-                click.secho("Violation detected: {}".format(violation), fg="red")
+                if override:
+                    click.secho("Violation detected but on white list: {}".format(violation), fg="yellow")
+                else:
+                    click.secho("Violation detected: {}".format(violation), fg="red")
     return violations
 
 
@@ -206,17 +226,18 @@ def generate_report(violations, config):
     """
     Generate a csv file report for the violations that were detected.
     """
-    report_data = str([v.report_string for v in violations])
     if not os.path.isdir(config.report_path):
         os.mkdir(config.report_path)
     click.echo("Writing report to {}".format(config.report_file))
     with io.open(config.report_file, 'w') as report_file:
-        report_file.write(report_data)
+        for violation in violations:
+            report_file.write("{}\n".format(violation.report_string()))
+    click.echo("Successfully wrote report")
 
 
 def set_status(violations, config):
     """
-    get the exit code of this script, depending on whether or not there are
+    set the exit code of this script, depending on whether or not there are
     any reserved keyword Violations detected that are not on the override
     list
     """

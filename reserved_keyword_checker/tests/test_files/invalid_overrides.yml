@@ -1,0 +1,5 @@
+---
+STITCH:
+    - BasicModel.first_field
+    - BasicModel. second_field
+    - BasicModel.third_field
