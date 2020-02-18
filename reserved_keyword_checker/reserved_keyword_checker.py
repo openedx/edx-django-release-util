@@ -287,3 +287,6 @@ def cli(
     click.echo("#"*80)
     generate_report(violations, config)
     set_status(violations, config)
+
+if __name__ == '__main__':
+    cli()
