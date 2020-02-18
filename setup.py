@@ -28,7 +28,7 @@ METADATA = dict(
     entry_points='''
         [console_scripts]
         reserved_keyword_checker=reserved_keyword_checker.reserved_keyword_checker:cli
-    '''
+    ''',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
