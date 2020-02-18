@@ -24,5 +24,5 @@ class GrandchildModel(ChildModel):
     class Meta:
         app_label = 'local_app'
 
-    middle_name = models.CharField(max_length=20)
+    _middle_name_field = models.CharField(max_length=20, db_column='middle_name')
     end = models.DateField()

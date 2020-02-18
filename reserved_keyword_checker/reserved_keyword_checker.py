@@ -23,7 +23,6 @@ python reserved_keyword_checker.py --reserved_keyword_file reserved_keywords.yml
 
 import inspect
 import io
-import re
 import os
 import sys
 
@@ -199,8 +198,18 @@ def get_fields_per_model(model):
     inheritance. Do not include hidden fields, as these are not created
     in app code.
     """
+    def _get_db_field_name(field):
+        """
+        Get the actual name that will be used to name the column for this
+        model field. These can be overridden with the 'db_column' field.
+        """
+        if hasattr(field, 'db_column') and field.db_column is not None:
+            return field.db_column
+        else:
+            return field.column
+
     return [
-        f.column
+        _get_db_field_name(f)
         for f in  model._meta.get_fields(include_hidden=False)
         if not f.auto_created
     ]
