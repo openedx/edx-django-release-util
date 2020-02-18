@@ -271,7 +271,7 @@ def set_status(violations, config):
     help='Path to write a report file containing all of the reserved keyword violations',
     type=click.Path(dir_okay=True, resolve_path=True)
 )
-def main(
+def cli(
     reserved_keyword_file,
     override_file,
     report_path,
@@ -287,7 +287,3 @@ def main(
     click.echo("#"*80)
     generate_report(violations, config)
     set_status(violations, config)
-
-
-if __name__ == "__main__":
-    main()
