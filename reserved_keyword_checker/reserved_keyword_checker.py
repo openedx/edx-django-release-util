@@ -35,7 +35,7 @@ from django.db import models
 
 class Violation(object):
     """
-    A Django model field name that is in conclict with a defined list of reserved keywords
+    A Django model field name that is in conflict with a defined list of reserved keywords
     """
 
     def __init__(self, model, field_name, system, override=False):
@@ -74,19 +74,20 @@ class Violation(object):
         else:
             app_source = "3rd party"
         if not self.inherited:
-            source = "Defined here"
+            source = "Class Definition"
         else:
             source = "Inherited"
-        return "{},{},{},{},{},{},{}".format(
+        keyword_data_string = (
             self.system, app_source, app_name, self.module_name, model_name, self.field, source
         )
+        return ",".join(keyword_data_string)
 
     @property
     def module_name(self):
         """
         The path to the module containing the reserved keyword violation
         """
-        module_string = re.sub(r'\.', '/', self.model._meta.concrete_model.__module__)
+        module_string = self.model._meta.concrete_model.__module__.replace('.', '/')
         return "{}.py".format(module_string)
 
     @property
@@ -111,7 +112,9 @@ class ConfigurationException(Exception):
 
 
 class Config(object):
-
+    """
+    A collection of configuration data used throughout this script
+    """
 
     def __init__(self, reserved_keyword_config_file, override_file, report_path):
         self.reserved_keyword_config = self.read_config_file(reserved_keyword_config_file)
@@ -136,10 +139,19 @@ class Config(object):
         return config_dict
 
     def validate_override_config(self):
-        field_path_regex = re.compile(r'([A-Z]\w*\.)(\w+)')
+        invalid_chars = [' ', ',', '-']
+        def check(s): return any([c in invalid_chars for c in s])
         for system, override_list in self.overrides.items():
             for pattern in override_list:
-                if not re.search(field_path_regex, pattern):
+                try:
+                    model_name, field_name = pattern.split('.')
+                    if not model_name[0].isupper():
+                        click.secho('Model names must be camel case', fg="red")
+                        raise ValueError()
+                    if check(field_name) or check(model_name):
+                        click.secho('Invalid character found', fg="red")
+                        raise ValueError()
+                except ValueError:
                     raise ConfigurationException("Invalid value in override file: {}".format(pattern))
 
 
@@ -147,7 +159,7 @@ def collect_concrete_models():
     """
     Walk through all of the INSTALLED_APPS in a Django project, gathering all
     of the 'concrete' models. In this case, 'concrete' refers to the fact
-    that a model has a corresponding tables within a database (as opposed to
+    that a model has a corresponding table within a database (as opposed to
     an abstract model, which does not). For more information, see:
     https://openedx.atlassian.net/wiki/spaces/PLAT/pages/895287378/OEP-30+Implementation
     """
@@ -170,7 +182,6 @@ def collect_concrete_models():
             model_hierarchy = inspect.getmro(root_model)
             for model in model_hierarchy:
                 if is_concrete(model):
-
                     model_name = model._meta.object_name
                     concrete_models.add(model)
                     app_models.append(model_name)
@@ -216,7 +227,7 @@ def check_model_for_violations(model, config):
                 violation = Violation(model, field, system, override)
                 violations.append(violation)
                 if override:
-                    click.secho("Violation detected but on white list: {}".format(violation), fg="yellow")
+                    click.secho("Violation detected but on whitelist: {}".format(violation), fg="yellow")
                 else:
                     click.secho("Violation detected: {}".format(violation), fg="red")
     return violations
@@ -232,7 +243,9 @@ def generate_report(violations, config):
     with io.open(config.report_file, 'w') as report_file:
         for violation in violations:
             report_file.write("{}\n".format(violation.report_string()))
-    click.echo("Successfully wrote report")
+    click.echo(
+        "Successfully wrote {} violations to report".format(len(violations))
+    )
 
 
 def set_status(violations, config):
