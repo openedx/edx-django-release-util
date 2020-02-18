@@ -25,11 +25,9 @@ class MixedModel(BasicModel, ModelMixin):
 class AbstractModel(models.Model):
     class Meta:
         app_label = 'non_concrete_app'
+        abstract = True
 
     start_date = models.CharField(max_length=20)
-
-    class Meta:
-        abstract = True
 
 
 class ModelWithAbstractParent(AbstractModel):
@@ -42,7 +40,4 @@ class ModelWithAbstractParent(AbstractModel):
 class ProxyModel(BasicModel):
     class Meta:
         app_label = 'non_concrete_app'
-
-    
-    class Meta:
         proxy = True
