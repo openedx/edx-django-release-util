@@ -100,8 +100,10 @@ class Violation(object):
     @property
     def local_app(self):
         """
-        Return whether or not this violation was found in a local source file or a third
-        party installed app
+        Return whether or not this violation was found in a local source file or a package
+        installed in the Python environment running this code. In this case, 'local' means
+        in the source code files in the directory that this is being run in. This can be determined
+        by using the module_name of the Violation, which is a path to the Python module.
         """
         return os.path.isfile(self.module_name)
 

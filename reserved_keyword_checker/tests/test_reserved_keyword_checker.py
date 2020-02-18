@@ -12,7 +12,8 @@ from ..reserved_keyword_checker import (
     collect_concrete_models,
     Config,
     ConfigurationException,
-    get_fields_per_model
+    get_fields_per_model,
+    Violation
 )
 
 @pytest.fixture
@@ -33,6 +34,19 @@ def test_concrete_model_collection(django_setup):
     load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
     models = collect_concrete_models()
     expected_model_names = ['BasicModel', 'ChildModel', 'GrandchildModel']
+    assert sorted([m._meta.concrete_model.__name__ for m in models]) == expected_model_names
+
+
+def test_concrete_model_collection_with_third_party_apps(django_setup):
+    load_apps([
+        'django.contrib.contenttypes',
+        'django.contrib.auth',
+        'waffle'
+    ])
+    models = collect_concrete_models()
+    expected_model_names = [
+        'ContentType', 'Flag', 'Group', 'Permission', 'Sample', 'Switch', 'User'
+    ]
     assert sorted([m._meta.concrete_model.__name__ for m in models]) == expected_model_names
 
 
@@ -61,6 +75,40 @@ def test_field_collection_with_non_concrete_parents(django_setup):
         'end_date', 'start_date'
     ]
     assert sorted(model_fields) == expected_field_names
+
+
+def test_field_collection_with_third_party_app(django_setup):
+    load_apps([
+        'django.contrib.contenttypes',
+        'django.contrib.auth',
+        'waffle'
+    ])
+    from waffle.models import Switch
+    model_fields = get_fields_per_model(Switch)
+    expected_field_names = ['active', 'created', 'modified', 'name', 'note']
+    assert sorted(model_fields) == expected_field_names
+
+
+def test_local_app_location_detection(django_setup):
+    from .test_app.local_app import models as local_models
+    violation = Violation(local_models.GrandchildModel, None, None, None)
+    assert violation.local_app
+
+
+def test_third_party_app_location_detection(django_setup):
+    """
+    django-waffle is considered to be not-local, that is, it is not defined within
+    the local source code of this application, but is installed in its Python
+    environment
+    """
+    load_apps([
+        'django.contrib.contenttypes',
+        'django.contrib.auth',
+        'waffle'
+    ])
+    from waffle.models import Switch
+    violation = Violation(Switch, None, None, None)
+    assert not violation.local_app
 
 
 def test_missing_config():

@@ -4,6 +4,7 @@
 
 ddt
 django-nose
+django-waffle
 mock
 nose
 path.py
