@@ -29,6 +29,7 @@ import sys
 import click
 import django
 import yaml
+from django.apps import apps
 from django.db import models
 
 
@@ -102,10 +103,14 @@ class Violation(object):
         """
         Return whether or not this violation was found in a local source file or a package
         installed in the Python environment running this code. In this case, 'local' means
-        in the source code files in the directory that this is being run in. This can be determined
-        by using the module_name of the Violation, which is a path to the Python module.
+        in the source code files in the directory that this is being run in. This can be
+        determined by checking if the Django app containing this violation is in env
         """
-        return os.path.isfile(self.module_name)
+        # This will return the path to the virtualenv/python installation being used to
+        # run this django app (i.e. /edx/app/credentials/venvs/credentials)
+        env_base_path = '/'.join(sys.executable.split('/')[:-2])
+        app_path = apps.get_app_config(self.model._meta.app_label).path
+        return env_base_path not in app_path
 
 
 class ConfigurationException(Exception):

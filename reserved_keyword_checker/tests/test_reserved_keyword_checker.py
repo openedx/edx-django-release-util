@@ -91,6 +91,7 @@ def test_field_collection_with_third_party_app(django_setup):
 
 def test_local_app_location_detection(django_setup):
     from .test_app.local_app import models as local_models
+    load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
     violation = Violation(local_models.GrandchildModel, None, None, None)
     assert violation.local_app
 
@@ -132,6 +133,7 @@ def test_invalid_override_config():
 
 def test_reserved_keyword_detection(django_setup):
     from .test_app.local_app import models as local_models
+    load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
     model = local_models.GrandchildModel
     config = Config('reserved_keyword_checker/tests/test_files/reserved_keywords.yml', None, 'reports')
     violations = check_model_for_violations(model, config)
