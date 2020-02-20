@@ -26,6 +26,8 @@ import io
 import os
 import sys
 
+from os.path import dirname
+
 import click
 import django
 import yaml
@@ -113,7 +115,7 @@ class Violation(object):
         """
         # This will return the path to the virtualenv/python installation being used to
         # run this django app (i.e. /edx/app/credentials/venvs/credentials)
-        env_base_path = '/'.join(sys.executable.split('/')[:-2])
+        env_base_path = dirname(dirname(sys.executable))
         app_path = apps.get_app_config(self.model._meta.app_label).path
         return env_base_path not in app_path
 
