@@ -139,11 +139,11 @@ def test_reserved_keyword_detection(django_setup):
     violations = check_model_for_violations(model, config)
     violation_strings = map(lambda v: v.report_string(), violations)
     expected_violations = [
-        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,end,Class Definition',
-        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,nick_name,Inherited',
-        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,start,Inherited',
-        'STITCH,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,end,Class Definition',
-        'STITCH,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,start,Inherited',
+        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,end,Class Definition,',
+        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,nick_name,Inherited,',
+        'MYSQL,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,start,Inherited,',
+        'STITCH,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,end,Class Definition,',
+        'STITCH,Local,local_app,reserved_keyword_checker/tests/test_app/local_app/models.py,GrandchildModel,start,Inherited,',
     ]
     assert sorted(violation_strings) == expected_violations
 

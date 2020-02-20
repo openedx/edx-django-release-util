@@ -77,8 +77,13 @@ class Violation(object):
             source = "Class Definition"
         else:
             source = "Inherited"
+        if self.override:
+            override_string = "Overridden"
+        else:
+            override_string = ""
         keyword_data_string = (
-            self.system, app_source, app_name, self.module_name, model_name, self.field, source
+            self.system, app_source, app_name, self.module_name, model_name, self.field,
+            source, override_string
         )
         return ",".join(keyword_data_string)
 
