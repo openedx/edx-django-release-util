@@ -17,6 +17,7 @@ METADATA = dict(
     license='AGPL',
     url='http://github.com/edx/edx-django-release-util',
     install_requires=[
+        'Click>=7.0',
         'django>=1.8,<2.0;python_version<"3"',
         'django>=1.11;python_version>"3"',
         'PyYAML>=3.11',
@@ -24,6 +25,10 @@ METADATA = dict(
     ],
     packages=find_packages(exclude=['*.test', '*.tests']),
     include_package_data=True,
+    entry_points='''
+        [console_scripts]
+        reserved_keyword_checker=reserved_keyword_checker.reserved_keyword_checker:cli
+    ''',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

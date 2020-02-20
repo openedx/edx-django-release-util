@@ -1,0 +1,9 @@
+---
+MYSQL:
+    - BasicModel.first_name
+    - BasicModel.nick_name
+    - BasicModel.end
+STITCH:
+    - GrandchildModel.first_name
+    - GrandchildModel.nick_name
+    - GrandchildModel.end
