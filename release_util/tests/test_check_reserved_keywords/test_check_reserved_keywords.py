@@ -7,18 +7,19 @@ from django.apps import apps
 import pytest
 import yaml
 
-from ..reserved_keyword_checker import (
+from release_util.management.commands.check_reserved_keywords import (
     check_model_for_violations,
     collect_concrete_models,
     Config,
     ConfigurationException,
     get_fields_per_model,
-    Violation
+    Violation,
 )
+
 
 @pytest.fixture
 def django_setup():
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'reserved_keyword_checker.tests.test_app.test_app.settings'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'release_util.tests.test_check_reserved_keywords.test_app.test_app.settings'
     django.setup()
 
 
@@ -31,7 +32,7 @@ def load_apps(app_names):
 
 
 def test_concrete_model_collection(django_setup):
-    load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
+    load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     models = collect_concrete_models()
     expected_model_names = ['BasicModel', 'ChildModel', 'GrandchildModel']
     assert sorted([m._meta.concrete_model.__name__ for m in models]) == expected_model_names
@@ -51,7 +52,7 @@ def test_concrete_model_collection_with_third_party_apps(django_setup):
 
 
 def test_model_collection_with_non_concrete_models(django_setup):
-    load_apps(['reserved_keyword_checker.tests.test_app.non_concrete_app'])
+    load_apps(['release_util.tests.test_check_reserved_keywords.test_app.non_concrete_app'])
     models = collect_concrete_models()
     expected_model_names = ['BasicModel', 'MixedModel', 'ModelWithAbstractParent']
     assert sorted([m._meta.concrete_model.__name__ for m in models]) == expected_model_names
@@ -91,7 +92,7 @@ def test_field_collection_with_third_party_app(django_setup):
 
 def test_local_app_location_detection(django_setup):
     from .test_app.local_app import models as local_models
-    load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
+    load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     violation = Violation(local_models.GrandchildModel, None, None, None)
     assert violation.local_app
 
@@ -114,7 +115,7 @@ def test_third_party_app_location_detection(django_setup):
 
 def test_missing_config():
     with pytest.raises(ConfigurationException) as exception:
-        Config('tests/test_files/missing_config.yml', None, 'reports')
+        Config('foo/bar/missing_config.yml', None, 'reports')
 
     exc_msg = str(exception.value)
     assert "Unable to load config file:" in exc_msg
@@ -123,8 +124,8 @@ def test_missing_config():
 def test_invalid_override_config():
     with pytest.raises(ConfigurationException) as exception:
         Config(
-            'reserved_keyword_checker/tests/test_files/reserved_keywords.yml',
-            'reserved_keyword_checker/tests/test_files/invalid_overrides.yml',
+            'release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml',
+            'release_util/tests/test_check_reserved_keywords/test_files/invalid_overrides.yml',
             'reports'
         )
     exc_msg = str(exception.value)
@@ -133,9 +134,9 @@ def test_invalid_override_config():
 
 def test_reserved_keyword_detection(django_setup):
     from .test_app.local_app import models as local_models
-    load_apps(['reserved_keyword_checker.tests.test_app.local_app'])
+    load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     model = local_models.GrandchildModel
-    config = Config('reserved_keyword_checker/tests/test_files/reserved_keywords.yml', None, 'reports')
+    config = Config('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', None, 'reports')
     violations = check_model_for_violations(model, config)
     violation_strings = map(lambda v: v.report_string(), violations)
     expected_violations = [
@@ -152,8 +153,8 @@ def test_overrides(django_setup):
     from .test_app.local_app import models as local_models
     model = local_models.GrandchildModel
     config = Config(
-        'reserved_keyword_checker/tests/test_files/reserved_keywords.yml',
-        'reserved_keyword_checker/tests/test_files/overrides.yml',
+        'release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml',
+        'release_util/tests/test_check_reserved_keywords/test_files/overrides.yml',
         'reports'
     )
     violations = check_model_for_violations(model, config)
@@ -162,3 +163,6 @@ def test_overrides(django_setup):
     assert overridden_violations == [
         'STITCH conflict in local_app:reserved_keyword_checker/tests/test_app/local_app/models.py:GrandchildModel.end'
     ]
+
+def test_command_defaults(django_setup):
+    call_command('check_reserved_keywords')

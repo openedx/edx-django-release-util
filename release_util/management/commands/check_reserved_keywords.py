@@ -1,5 +1,5 @@
 """
-reserved_keyword_checker.py
+check_reserved_keywords.py
 
 A utility for analyzing a Django application to see if any of the model fields
 have names that are on a list of reseverd keywords. Certain tools used for downstream
@@ -12,27 +12,32 @@ installed apps.
 
 EXAMPLE USAGE:
 
-python reserved_keyword_checker.py --reserved_keyword_file reserved_keywords.yml --override_file overrides.yml --report_path reports
+python manage.py check_reserved_keywords.py --reserved_keyword_file reserved_keywords.yml --override_file overrides.yml --report_path reports
 
-> reserved_keywords.yml: a yaml file containing a mapping of tool (i.e. Snowflake) to a
+OPTIONS:
+
+* --reserved_keyword_file: pass a yaml file containing a mapping of tool (i.e. Snowflake) to a
   list of reserved keywords for that technology
-> overrides.yml: a yaml file containing a list of model fields to ignore when scanning
+* --override_file: pass a yaml file containing a list of model fields to ignore when scanning
   for reserved keyword violations.
-> reports: a path in which to write a csv report of the violations found with this script
+* --report_path: pass a path in which to write a csv report of the violations found with this script.
 """
 
 import inspect
 import io
 import os
 import sys
+import logging
 
 from os.path import dirname
 
-import click
 import django
 import yaml
 from django.apps import apps
 from django.db import models
+from django.core.management.base import BaseCommand
+
+log = logging.getLogger(__name__)
 
 
 class Violation(object):
@@ -141,7 +146,7 @@ class Config(object):
 
     @staticmethod
     def read_config_file(config_file_path):
-        click.echo("Loading config file: {}".format(config_file_path))
+        log.info("Loading config file: {}".format(config_file_path))
         try:
             with io.open(config_file_path, 'r') as config_file:
                 config_dict = yaml.safe_load(config_file)
@@ -159,10 +164,10 @@ class Config(object):
                 try:
                     model_name, field_name = pattern.split('.')
                     if not model_name[0].isupper():
-                        click.secho('Model names must be camel case', fg="red")
+                        log.error('Model names must be camel case')
                         raise ValueError()
                     if check(field_name) or check(model_name):
-                        click.secho('Invalid character found', fg="red")
+                        log.error('Invalid character found')
                         raise ValueError()
                 except ValueError:
                     raise ConfigurationException("Invalid value in override file: {}".format(pattern))
@@ -186,9 +191,9 @@ def collect_concrete_models():
 
     concrete_models = set()
 
-    click.echo("Collecting all concrete models in installed apps")
+    log.info("Collecting all concrete models in installed apps")
     for app in django.apps.apps.get_app_configs():
-        click.echo("Inspecting app: {}".format(app))
+        log.info("Inspecting app: {}".format(app))
         app_models = []
         for root_model in app.get_models():
 
@@ -199,9 +204,9 @@ def collect_concrete_models():
                     concrete_models.add(model)
                     app_models.append(model_name)
         if app_models:
-            click.echo("Found models: {}".format(','.join(app_models)))
+            log.info("Found models: {}".format(','.join(app_models)))
 
-    click.echo("Collected {} concrete models".format(len(concrete_models)))
+    log.info("Collected {} concrete models".format(len(concrete_models)))
     return list(concrete_models)
 
 
@@ -250,9 +255,9 @@ def check_model_for_violations(model, config):
                 violation = Violation(model, field, system, override)
                 violations.append(violation)
                 if override:
-                    click.secho("Violation detected but on whitelist: {}".format(violation), fg="yellow")
+                    log.warn("Violation detected but on whitelist: {}".format(violation))
                 else:
-                    click.secho("Violation detected: {}".format(violation), fg="red")
+                    log.error("Violation detected: {}".format(violation))
     return violations
 
 
@@ -262,11 +267,11 @@ def generate_report(violations, config):
     """
     if not os.path.isdir(config.report_path):
         os.mkdir(config.report_path)
-    click.echo("Writing report to {}".format(config.report_file))
+    log.info("Writing report to {}".format(config.report_file))
     with io.open(config.report_file, 'w') as report_file:
         for violation in violations:
             report_file.write("{}\n".format(violation.report_string()))
-    click.echo(
+    log.info(
         "Successfully wrote {} violations to report".format(len(violations))
     )
 
@@ -281,48 +286,61 @@ def set_status(violations, config):
         filter(lambda v: v not in config.overrides, violations)
     )
     if len(valid_violations) > 0:
-        click.secho("Found reserved keyword conflicts!", fg="red")
+        log.error("Found reserved keyword conflicts!")
         sys.exit(1)
     else:
-        click.echo("No reserved keyword conflicts detected")
+        log.info("No reserved keyword conflicts detected")
         sys.exit(0)
 
 
-@click.command()
-@click.option(
-    '--reserved_keyword_file',
-    default='reserved_keywords.yml',
-    help='Path to the configuration file containing the lists of reserved keywords to check for',
-    type=click.Path(exists=True, dir_okay=False, resolve_path=True)
-)
-@click.option(
-    '--override_file',
-    default=None,
-    help='Path to the configuration file containing the lists of reserved keywords that can be excluded from analysis',
-    type=click.Path(exists=False, dir_okay=False, resolve_path=True)
-)
-@click.option(
-    '--report_path',
-    default='reports',
-    help='Path to write a report file containing all of the reserved keyword violations',
-    type=click.Path(dir_okay=True, resolve_path=True)
-)
-def cli(
-    reserved_keyword_file,
-    override_file,
-    report_path,
-):
-    django.setup()
-    config = Config(reserved_keyword_file, override_file, report_path)
-    concrete_models = collect_concrete_models()
-    violations = []
-    click.echo("Checking models for reserved keyword violations")
-    click.echo("#"*80)
-    for model in concrete_models:
-        violations += check_model_for_violations(model, config)
-    click.echo("#"*80)
-    generate_report(violations, config)
-    set_status(violations, config)
 
-if __name__ == '__main__':
-    cli()
+class writable_dir(argparse.Action):
+    """
+    A custom argparse action to check that a given argument value represents a writable directory.
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("{} is not a valid path".format(prospective_dir))
+        elif not os.access(prospective_dir, os.W_OK):
+            raise argparse.ArgumentTypeError("{} is not a readable dir".format(prospective_dir))
+        else:
+            setattr(namespace,self.dest,prospective_dir)
+
+
+class Command(BaseCommand):
+    help = 'Closes the specified poll for voting'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--reserved_keyword_file',
+            default=os.path.join(os.path.dirname(__file__), 'default_reserved_keywords.yml')),
+            help='Path to the configuration file containing the lists of reserved keywords to check for.',
+            type=argparse.FileType('r', encoding='UTF-8'),
+        )
+        parser.add_argument(
+            '--override_file',
+            default=None,
+            help='Path to the configuration file containing the lists of reserved keywords that can be excluded from analysis',
+            type=argparse.FileType('r', encoding='UTF-8'),
+        )
+        parser.add_argument(
+            '--report_path',
+            default='reports',
+            help='Path to write a report file containing all of the reserved keyword violations',
+            action=writable_dir,
+        )
+
+    def handle(self, *args, **options):
+        #django.setup()
+        config = Config(options['reserved_keyword_file'], options['override_file'], options['report_path'])
+        concrete_models = collect_concrete_models()
+        violations = []
+        log.info("Checking models for reserved keyword violations")
+        log.info("#"*80)
+        for model in concrete_models:
+            violations += check_model_for_violations(model, config)
+        log.info("#"*80)
+        generate_report(violations, config)
+        set_status(violations, config)
