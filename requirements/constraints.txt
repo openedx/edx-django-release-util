@@ -7,3 +7,34 @@
 # link to other information that will help people in the future to remove the
 # pin when possible. Writing an issue against the offending project and
 # linking to it here is good.
+
+# pytest 5.0.0 drops support for python 2.7.  Remove this constraint once we
+# fully drop support for python 2.7 in all IDAs that include this app.
+pytest<5.0.0
+
+# more-itertools 6.0.0 drops support for python 2.7.  Remove this constraint
+# once we fully drop support for python 2.7 in all IDAs that include this app.
+more-itertools<6.0.0
+
+# path.py 12.0 (renamed to "path" in 13.0.0) drops support for python 2.7.
+# Remove this constraint once we fully drop support for python 2.7 in all IDAs
+# that include this app.
+path.py<12.0
+
+# Django 3.x introduces a new requirement, asgiref, which practically has no
+# version that supports python 2.7.  Remove this constraint once we fully drop
+# support for python 2.7 in all IDAs that include this app.
+Django<3.0.0
+
+# zipp 2.0.0 drops support for python 2.7.  Remove this constraint once we
+# fully drop support for python 2.7 in all IDAs that include this app.
+zipp<2.0.0
+
+# mock 4.0.0 drops support for python 3.5.  Remove this constraint once we
+# fully drop support for python 3.5 in all IDAs that include this app.
+mock<4.0.0
+
+# For some reason unclear to me, these were constrained before I overhauled
+# requirements.
+PyYAML>=3.11
+six>=1.10.0

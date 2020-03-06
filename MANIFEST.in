@@ -1,2 +1,3 @@
 include README.md
-include reserved_keyword_checker/reserved_keywords.yml
+include requirements/base.in
+include release_util/management/commands/default_reserved_keywords.yml

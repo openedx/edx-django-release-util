@@ -1,0 +1,13 @@
+-c constraints.txt
+
+-r base.txt
+
+ddt
+django-nose
+django-waffle
+mock
+path.py
+pytest
+pytest-cov                # pytest extension for code coverage statistics
+pytest-django             # pytest extension for better Django support
+tox

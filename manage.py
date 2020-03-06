@@ -1,6 +1,11 @@
 #!/usr/bin/env python
-import sys
+"""
+entry point for running management commands in this package.
+"""
+
+
 import os
+import sys
 
 if __name__ == "__main__":
 

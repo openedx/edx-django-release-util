@@ -6,28 +6,38 @@ python:
   - 2.7
   - 3.5
   - 3.6
+  - 3.7
+  - 3.8
 
 env:
   - TOXENV=django111
+  - TOXENV=django20
+  - TOXENV=django21
+  - TOXENV=django22
 
-matrix:
- include:
-  - python: 3.5
-    env: TOXENV=django20
-  - python: 3.5
-    env: TOXENV=django21
-  - python: 3.5
-    env: TOXENV=django22
+jobs:
+  include:
+    - python: 3.6
+      env: TOXENV=quality
+  exclude:
+    - python: 2.7
+      env: TOXENV=django20
+    - python: 2.7
+      env: TOXENV=django21
+    - python: 2.7
+      env: TOXENV=django22
 
 cache:
   - pip
 
+before_install:
+  - pip install --upgrade pip wheel
+
 install:
-  - pip install -U pip wheel
   - make requirements
 
 script:
-  - make test
+  - tox
 
 deploy:
   provider: pypi
@@ -37,3 +47,4 @@ deploy:
   distributions: sdist bdist_wheel
   on:
     tags: true
+    condition: '$TOXENV = quality'
