@@ -23,16 +23,17 @@ OPTIONS:
 * --report_path: pass a path in which to write a csv report of the violations found with this script.
 """
 
+import argparse
 import inspect
 import io
+import logging
 import os
 import sys
-import logging
+import yaml
 
 from os.path import dirname
 
 import django
-import yaml
 from django.apps import apps
 from django.db import models
 from django.core.management.base import BaseCommand
@@ -310,12 +311,15 @@ class writable_dir(argparse.Action):
 
 
 class Command(BaseCommand):
-    help = 'Closes the specified poll for voting'
+    help = (
+        'Check a Django application to see if any of the model fields have names that are on a list of reseverd '
+        'keywords.'
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--reserved_keyword_file',
-            default=os.path.join(os.path.dirname(__file__), 'default_reserved_keywords.yml')),
+            default=os.path.join(os.path.dirname(__file__), 'default_reserved_keywords.yml'),
             help='Path to the configuration file containing the lists of reserved keywords to check for.',
             type=argparse.FileType('r', encoding='UTF-8'),
         )

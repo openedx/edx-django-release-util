@@ -4,5 +4,5 @@
 #
 #    make upgrade
 #
-pyyaml==5.3
-six==1.14.0
+pyyaml==5.3               # via -r requirements/base.in
+six==1.14.0               # via -r requirements/base.in

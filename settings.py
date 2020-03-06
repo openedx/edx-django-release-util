@@ -1,5 +1,5 @@
 """
-Settings for the edx-django-release-util app.
+Test settings for the edx-django-release-util app.
 """
 
 DEBUG = True
@@ -45,9 +45,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
 
-    # Test
-    'django_nose',
-
     # Release utilities
     'release_util',
 
@@ -65,6 +62,3 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware'
 )
-
-TEST_APPS = ('release_util',)
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'

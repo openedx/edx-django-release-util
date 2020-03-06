@@ -1,2 +1,1 @@
 include README.md
-include reserved_keyword_checker/reserved_keywords.yml
