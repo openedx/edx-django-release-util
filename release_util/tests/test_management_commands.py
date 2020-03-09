@@ -3,9 +3,9 @@ import contextlib
 import tempfile
 
 from datetime import datetime
-from unittest import skip
 import ddt
 import six
+import pytest
 import yaml
 import release_util.management.commands.generate_history
 from django.core.management import call_command, CommandError
@@ -261,7 +261,7 @@ class MigrationCommandsTests(TransactionTestCase):
             output="Checking...All migration files present.",
         )
 
-    @skip('')
+    @pytest.mark.skip('')
     def test_run_migrations_success_one_by_one(self):
         """
         DEPRECATED:

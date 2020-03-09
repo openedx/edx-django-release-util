@@ -46,7 +46,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
 
     # Test
-    'django_nose',
+    # 'django_nose',
 
     # Release utilities
     'release_util',
@@ -67,4 +67,3 @@ MIDDLEWARE_CLASSES = (
 )
 
 TEST_APPS = ('release_util',)
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
