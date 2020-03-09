@@ -15,10 +15,17 @@ env:
   - TOXENV=django21
   - TOXENV=django22
 
-matrix:
+jobs:
   include:
     - python: 3.6
       env: TOXENV=quality
+  exclude:
+    - python: 2.7
+      env: TOXENV=django20
+    - python: 2.7
+      env: TOXENV=django21
+    - python: 2.7
+      env: TOXENV=django22
 
 cache:
   - pip
