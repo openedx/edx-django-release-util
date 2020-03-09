@@ -7,28 +7,18 @@ import release_util
 
 long_description = io.open('README.rst', encoding='utf-8').read()
 
-METADATA = dict(
+setup(
     name='edx-django-release-util',
     version=release_util.__version__,
     description='edx-django-release-util',
     author='edX',
     author_email='oscm@edx.org',
     long_description=long_description,
-    license='AGPL',
+    license='AGPL 3.0',
     url='http://github.com/edx/edx-django-release-util',
-    install_requires=[
-        'Click>=7.0',
-        'django>=1.8,<2.0;python_version<"3"',
-        'django>=1.11;python_version>"3"',
-        'PyYAML>=3.11',
-        'six>=1.10.0,<2.0.0',
-    ],
+    install_requires=load_requirements('requirements/base.in'),
     packages=find_packages(exclude=['*.test', '*.tests']),
     include_package_data=True,
-    entry_points='''
-        [console_scripts]
-        reserved_keyword_checker=reserved_keyword_checker.reserved_keyword_checker:cli
-    ''',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -42,6 +32,8 @@ METADATA = dict(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Framework :: Django',
         'Framework :: Django :: 1.11',
         'Framework :: Django :: 2.0',
@@ -49,6 +41,3 @@ METADATA = dict(
         'Framework :: Django :: 2.2',
     ],
 )
-
-if __name__ == '__main__':
-    setup(**METADATA)

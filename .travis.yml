@@ -27,8 +27,10 @@ matrix:
 cache:
   - pip
 
+before_install:
+  - pip install --upgrade pip wheel
+
 install:
-  - pip install -U pip wheel
   - make requirements
 
 script:

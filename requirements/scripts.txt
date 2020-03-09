@@ -7,7 +7,7 @@
 certifi==2019.11.28       # via requests
 cffi==1.14.0              # via cryptography
 chardet==3.0.4            # via requests
-click==7.0                # via -r requirements/scripts.in
+click==7.1                # via -r requirements/scripts.in
 cryptography==2.8         # via jwcrypto
 github3.py==1.3.0         # via -r requirements/scripts.in
 idna==2.9                 # via requests
