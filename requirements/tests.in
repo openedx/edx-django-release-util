@@ -3,10 +3,9 @@
 -r base.txt
 
 ddt
-django-nose
 django-waffle
 mock
-nose
 path.py
 pytest
+pytest-django
 tox
