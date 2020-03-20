@@ -1,18 +1,19 @@
-import sys
 import contextlib
+import sys
 import tempfile
-
 from datetime import datetime
 from unittest import skip
+
 import ddt
 import six
 import yaml
-import release_util.management.commands.generate_history
-from django.core.management import call_command, CommandError
+from django.core.management import CommandError, call_command
 from django.db import connection
 from django.db.migrations.state import ProjectState
 from django.test import TransactionTestCase
 from mock import patch
+
+import release_util.management.commands.generate_history
 import release_util.tests.migrations.test_migrations
 from release_util.management.commands import MigrationSession
 from release_util.tests.models import Foo, HistoricalFoo
@@ -77,12 +78,15 @@ class GenerateHistoryTest(TransactionTestCase):
             history_user_id=None,
         )
 
-        with patch.object(release_util.management.commands.generate_history.Command, 'columns_from_schema', return_value=['id', 'name']):
+        with patch.object(
+            release_util.management.commands.generate_history.Command,
+            'columns_from_schema', return_value=['id', 'name']
+        ):
             call_command('generate_history', tables=["test_app_foo"], batchsize=1)
 
         self.assertEqual(HistoricalFoo.objects.count(), 3)
 
-        historical_rows = HistoricalFoo.objects.filter(id__in=[2,3])
+        historical_rows = HistoricalFoo.objects.filter(id__in=[2, 3])
 
         for row, historical_row in zip(rows, historical_rows):
             self.assertEqual(historical_row.id, row.id)
@@ -92,9 +96,11 @@ class GenerateHistoryTest(TransactionTestCase):
             self.assertEqual(historical_row.history_type, '+')
             self.assertEqual(historical_row.history_user_id, None)
 
-
         # Test no-op as all rows would now have history
-        with patch.object(release_util.management.commands.generate_history.Command, 'columns_from_schema', return_value=['id', 'name']):
+        with patch.object(
+            release_util.management.commands.generate_history.Command,
+            'columns_from_schema', return_value=['id', 'name']
+        ):
             call_command('generate_history', tables=["test_app_foo"], batchsize=1)
 
         self.assertEqual(HistoricalFoo.objects.count(), 3)
@@ -409,7 +415,7 @@ class MigrationCommandsTests(TransactionTestCase):
                     'database': 'default',
                     'failed_migration': ['release_util', '0002_second'],
                     'migration': 'all',
-                    'succeeded_migrations': [['release_util', '0001_initial'],],
+                    'succeeded_migrations': [['release_util', '0001_initial'], ],
                     'duration': None,
                     'output': None,
                     'traceback': None,
@@ -462,13 +468,16 @@ class MigrationCommandsTests(TransactionTestCase):
         # A bogus class for creating a migration object that will raise a CommandError.
         class MigrationFail(object):
             atomic = False
+
             def state_forwards(self, app_label, state):
                 pass
+
             def database_forwards(self, app_label, schema_editor, from_state, to_state):
                 raise CommandError("Yo")
 
         # Insert the bogus object into the first operation of a migration.
-        current_migration_list = release_util.tests.migrations.test_migrations.__dict__[migration_name].__dict__['Migration'].operations
+        current_migration_list = \
+            release_util.tests.migrations.test_migrations.__dict__[migration_name].__dict__['Migration'].operations
         current_migration_list.insert(0, MigrationFail())
 
         try:
@@ -478,7 +487,9 @@ class MigrationCommandsTests(TransactionTestCase):
                 cmd_args=(in_file.name,),
                 cmd_kwargs={'output_file': out_file.name},
                 output=migration_output,
-                err_output="Migration error: Migration failed for app 'release_util' - migration '{}'.".format(migration_name),
+                err_output="Migration error: Migration failed for app 'release_util' - migration '{}'.".format(
+                    migration_name
+                ),
                 exit_value=1
             )
         finally:

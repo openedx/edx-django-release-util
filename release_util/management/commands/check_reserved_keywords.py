@@ -1,5 +1,5 @@
 """
-reserved_keyword_checker.py
+check_reserved_keywords.py
 
 A utility for analyzing a Django application to see if any of the model fields
 have names that are on a list of reseverd keywords. Certain tools used for downstream
@@ -12,27 +12,38 @@ installed apps.
 
 EXAMPLE USAGE:
 
-python reserved_keyword_checker.py --reserved_keyword_file reserved_keywords.yml --override_file overrides.yml --report_path reports
+python manage.py check_reserved_keywords.py --reserved_keyword_file reserved_keywords.yml \
+--override_file overrides.yml --report_path reports
 
-> reserved_keywords.yml: a yaml file containing a mapping of tool (i.e. Snowflake) to a
+OPTIONS:
+
+* --reserved_keyword_file: pass a yaml file containing a mapping of tool (i.e. Snowflake) to a
   list of reserved keywords for that technology
-> overrides.yml: a yaml file containing a list of model fields to ignore when scanning
+* --override_file: pass a yaml file containing a list of model fields to ignore when scanning
   for reserved keyword violations.
-> reports: a path in which to write a csv report of the violations found with this script
+* --report_path: pass a path in which to write a csv report of the violations found with this script.
 """
 
+import argparse
 import inspect
 import io
+import logging
 import os
 import sys
-
 from os.path import dirname
 
-import click
 import django
+import six
 import yaml
 from django.apps import apps
+from django.core.management import CommandError
+from django.core.management.base import BaseCommand
 from django.db import models
+
+if six.PY2:
+    FileNotFoundError = IOError
+
+log = logging.getLogger(__name__)
 
 
 class Violation(object):
@@ -104,7 +115,7 @@ class Violation(object):
         in which it was found
         """
         return self.field not in [f.name for f in self.model._meta.local_fields]
-    
+
     @property
     def local_app(self):
         """
@@ -129,8 +140,17 @@ class Config(object):
     A collection of configuration data used throughout this script
     """
 
-    def __init__(self, reserved_keyword_config_file, override_file, report_path):
-        self.reserved_keyword_config = self.read_config_file(reserved_keyword_config_file)
+    def __init__(self, reserved_keyword_config_file, override_file, report_path, system):
+        reserved_keyword_config = self.read_config_file(reserved_keyword_config_file)
+        if system:
+            try:
+                self.reserved_keyword_config = {system: reserved_keyword_config[system]}
+            except KeyError:
+                raise ConfigurationException(
+                    "Parameter {} missing from config file {}".format(system, reserved_keyword_config_file)
+                )
+        else:
+            self.reserved_keyword_config = reserved_keyword_config
         if override_file:
             self.overrides = self.read_config_file(override_file)
         else:
@@ -141,11 +161,14 @@ class Config(object):
 
     @staticmethod
     def read_config_file(config_file_path):
-        click.echo("Loading config file: {}".format(config_file_path))
+        log.info("Loading config file: {}".format(config_file_path))
         try:
-            with io.open(config_file_path, 'r') as config_file:
-                config_dict = yaml.safe_load(config_file)
-        except:
+            config_dict = yaml.safe_load(config_file_path)
+            # for ease of use later in this script, change keys without values from None to empty lists
+            for key in config_dict.keys():
+                if not config_dict[key]:
+                    config_dict[key] = []
+        except (yaml.parser.ParserError, FileNotFoundError):
             raise ConfigurationException("Unable to load config file: {}".format(config_file_path))
         if not config_dict:
             raise ConfigurationException("Config file is empty: {}".format(config_file_path))
@@ -159,10 +182,10 @@ class Config(object):
                 try:
                     model_name, field_name = pattern.split('.')
                     if not model_name[0].isupper():
-                        click.secho('Model names must be camel case', fg="red")
+                        log.error('Model names must be camel case')
                         raise ValueError()
                     if check(field_name) or check(model_name):
-                        click.secho('Invalid character found', fg="red")
+                        log.error('Invalid character found')
                         raise ValueError()
                 except ValueError:
                     raise ConfigurationException("Invalid value in override file: {}".format(pattern))
@@ -179,16 +202,16 @@ def collect_concrete_models():
     def is_concrete(model):
         return (
             issubclass(model, models.Model) and
-            not model is models.Model and
+            model is not models.Model and
             not model._meta.abstract and
             not model._meta.proxy
         )
 
     concrete_models = set()
 
-    click.echo("Collecting all concrete models in installed apps")
+    log.info("Collecting all concrete models in installed apps")
     for app in django.apps.apps.get_app_configs():
-        click.echo("Inspecting app: {}".format(app))
+        log.info("Inspecting app: {}".format(app.label))
         app_models = []
         for root_model in app.get_models():
 
@@ -199,9 +222,9 @@ def collect_concrete_models():
                     concrete_models.add(model)
                     app_models.append(model_name)
         if app_models:
-            click.echo("Found models: {}".format(','.join(app_models)))
+            log.info("Found models: {}".format(','.join(app_models)))
 
-    click.echo("Collected {} concrete models".format(len(concrete_models)))
+    log.info("Collected {} concrete models".format(len(concrete_models)))
     return list(concrete_models)
 
 
@@ -224,7 +247,7 @@ def get_fields_per_model(model):
 
     return [
         _get_db_field_name(f)
-        for f in  model._meta.get_fields(include_hidden=False)
+        for f in model._meta.get_fields(include_hidden=False)
         if not f.auto_created
     ]
 
@@ -238,7 +261,8 @@ def check_model_for_violations(model, config):
 
     for field in get_fields_per_model(model):
         for system in config.reserved_keyword_config.keys():
-            if field in config.reserved_keyword_config[system]:
+            reserved_keywords = [rkw.lower() for rkw in config.reserved_keyword_config[system]]
+            if field in reserved_keywords:
                 full_field_name = "{}.{}".format(
                     model._meta.concrete_model.__name__,
                     field
@@ -250,9 +274,9 @@ def check_model_for_violations(model, config):
                 violation = Violation(model, field, system, override)
                 violations.append(violation)
                 if override:
-                    click.secho("Violation detected but on whitelist: {}".format(violation), fg="yellow")
+                    log.warn("Violation detected but on whitelist: {}".format(violation))
                 else:
-                    click.secho("Violation detected: {}".format(violation), fg="red")
+                    log.error("Violation detected: {}".format(violation))
     return violations
 
 
@@ -262,11 +286,11 @@ def generate_report(violations, config):
     """
     if not os.path.isdir(config.report_path):
         os.mkdir(config.report_path)
-    click.echo("Writing report to {}".format(config.report_file))
+    log.info("Writing report to {}".format(config.report_file))
     with io.open(config.report_file, 'w') as report_file:
         for violation in violations:
             report_file.write("{}\n".format(violation.report_string()))
-    click.echo(
+    log.info(
         "Successfully wrote {} violations to report".format(len(violations))
     )
 
@@ -281,48 +305,68 @@ def set_status(violations, config):
         filter(lambda v: v not in config.overrides, violations)
     )
     if len(valid_violations) > 0:
-        click.secho("Found reserved keyword conflicts!", fg="red")
-        sys.exit(1)
+        raise CommandError("Found reserved keyword conflicts!")
     else:
-        click.echo("No reserved keyword conflicts detected")
-        sys.exit(0)
+        log.info("No reserved keyword conflicts detected")
 
 
-@click.command()
-@click.option(
-    '--reserved_keyword_file',
-    default='reserved_keywords.yml',
-    help='Path to the configuration file containing the lists of reserved keywords to check for',
-    type=click.Path(exists=True, dir_okay=False, resolve_path=True)
-)
-@click.option(
-    '--override_file',
-    default=None,
-    help='Path to the configuration file containing the lists of reserved keywords that can be excluded from analysis',
-    type=click.Path(exists=False, dir_okay=False, resolve_path=True)
-)
-@click.option(
-    '--report_path',
-    default='reports',
-    help='Path to write a report file containing all of the reserved keyword violations',
-    type=click.Path(dir_okay=True, resolve_path=True)
-)
-def cli(
-    reserved_keyword_file,
-    override_file,
-    report_path,
-):
-    django.setup()
-    config = Config(reserved_keyword_file, override_file, report_path)
-    concrete_models = collect_concrete_models()
-    violations = []
-    click.echo("Checking models for reserved keyword violations")
-    click.echo("#"*80)
-    for model in concrete_models:
-        violations += check_model_for_violations(model, config)
-    click.echo("#"*80)
-    generate_report(violations, config)
-    set_status(violations, config)
+class writable_dir(argparse.Action):
+    """
+    A custom argparse action to check that a given argument value represents a writable directory.
+    """
 
-if __name__ == '__main__':
-    cli()
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir = values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("{} is not a valid path".format(prospective_dir))
+        elif not os.access(prospective_dir, os.W_OK):
+            raise argparse.ArgumentTypeError("{} is not a readable dir".format(prospective_dir))
+        else:
+            setattr(namespace, self.dest, prospective_dir)
+
+
+class Command(BaseCommand):
+    help = (
+        'Check a Django application to see if any of the model fields have names that are on a list of reseverd '
+        'keywords.'
+    )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--reserved_keyword_file',
+            default=os.path.join(os.path.dirname(__file__), 'default_reserved_keywords.yml'),
+            help='Path to the configuration file containing the lists of reserved keywords to check for.',
+            type=argparse.FileType('r', encoding='UTF-8'),
+        )
+        parser.add_argument(
+            '--override_file',
+            default=None,
+            help=(
+                'Path to the configuration file containing the lists of '
+                'reserved keywords that can be excluded from analysis'
+            ),
+            type=argparse.FileType('r', encoding='UTF-8'),
+        )
+        parser.add_argument(
+            '--report_path',
+            default='reports',
+            help='Path to write a report file containing all of the reserved keyword violations',
+            action=writable_dir,
+        )
+        parser.add_argument(
+            '--system',
+            default=None,
+            help="Specific system list in 'reserved_keyword_file' to check for (i.e. MYSQL)"
+        )
+
+    def handle(self, *args, **options):
+        config = Config(
+            options['reserved_keyword_file'], options['override_file'], options['report_path'], options['system']
+        )
+        concrete_models = collect_concrete_models()
+        violations = []
+        log.info("Checking models for reserved keyword violations")
+        for model in concrete_models:
+            violations += check_model_for_violations(model, config)
+        generate_report(violations, config)
+        set_status(violations, config)

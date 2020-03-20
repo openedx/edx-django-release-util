@@ -1,7 +1,10 @@
+import sys
+
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
+
 from release_util.management.commands import MigrationSession, dump_migration_session_state
-import sys
+
 
 class Command(BaseCommand):
     """
@@ -68,7 +71,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         migrator = MigrationSession(self.stderr, kwargs['database'], migrations=kwargs['migration'])
-        
+
         failure = False
         try:
             migrator.apply()

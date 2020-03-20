@@ -1,1 +1,5 @@
-__version__ = '0.3.6'  # pragma: no cover
+"""
+a collection of Django management commands used for analyzing and manipulating migrations.
+"""
+
+__version__ = '0.4.0'  # pragma: no cover

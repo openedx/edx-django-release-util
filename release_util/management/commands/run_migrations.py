@@ -3,6 +3,7 @@ import sys
 from django.core.management import CommandError
 from django.core.management.base import BaseCommand
 from django.db import DEFAULT_DB_ALIAS
+
 from release_util.management.commands import MigrationSession, dump_migration_session_state
 
 

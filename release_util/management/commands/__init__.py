@@ -3,11 +3,12 @@ Common release_util code used by management commands.
 """
 import re
 import sys
-from copy import deepcopy
 import traceback
+from copy import deepcopy
 from timeit import default_timer
+
 import yaml
-from django.core.management import call_command, CommandError
+from django.core.management import CommandError, call_command
 from django.db import connections
 from django.db.migrations.loader import MigrationLoader
 from six import StringIO
@@ -35,8 +36,12 @@ def dump_migration_session_state(raw):
         line 2
         line 3
     """
-    class BlockStyle(str): pass
-    class SessionDumper(yaml.SafeDumper): pass
+    class BlockStyle(str):
+        pass
+
+    class SessionDumper(yaml.SafeDumper):
+        pass
+
     def str_block_formatter(dumper, data):
         return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
     SessionDumper.add_representer(BlockStyle, str_block_formatter)
@@ -46,6 +51,7 @@ def dump_migration_session_state(raw):
         step['output'] = BlockStyle(step['output'])
         step['traceback'] = BlockStyle(step['traceback'])
     return yaml.dump(raw, Dumper=SessionDumper)
+
 
 def _remove_escape_characters(s):
     """
@@ -141,7 +147,9 @@ class MigrationSession(object):
         #       Applying auth.0004_alter_user_username_opts... OK
         #       Applying auth.0005_alter_user_last_login_null... OK
         # The last line might be missing the "OK" if it failed
-        self.migration_regex = re.compile(r'Applying (?P<app_name>[^.]+)\.(?P<migration_name>[^.]+)[. ]+(?P<success>(OK)?)$')
+        self.migration_regex = re.compile(
+            r'Applying (?P<app_name>[^.]+)\.(?P<migration_name>[^.]+)[. ]+(?P<success>(OK)?)$'
+        )
 
     def add_migrations(self, migrations):
         """
@@ -303,7 +311,7 @@ class MigrationSession(object):
         try:
             while self._to_apply:
                 self.__apply(migration=self._to_apply.pop(0))
-        except:
+        except:  # noqa
             raise
         finally:
             self.__closed = True
@@ -319,7 +327,7 @@ class MigrationSession(object):
 
         try:
             self.__apply(run_all=True)
-        except:
+        except:  # noqa
             raise
         finally:
             self.__closed = True

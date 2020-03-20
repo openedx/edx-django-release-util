@@ -4,6 +4,7 @@ Management command to populate initial history.
 import logging
 import time
 from datetime import datetime
+
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
@@ -17,7 +18,8 @@ class Command(BaseCommand):
     """
     Populate initial history for models using django-simple-history.
     Example usage:
-    $ ./manage.py lms generate_history --tables organizations_organization entitlements_courseentitlement --batchsize 1000 --sleep_between 1 --settings=devstack
+    $ ./manage.py lms generate_history --tables organizations_organization entitlements_courseentitlement \
+      --batchsize 1000 --sleep_between 1 --settings=devstack
     """
 
     help = (
