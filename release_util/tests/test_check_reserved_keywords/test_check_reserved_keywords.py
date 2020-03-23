@@ -7,6 +7,7 @@ import pytest
 import yaml
 from django.apps import apps
 from django.conf import settings
+from django.core.management import CommandError
 
 from release_util.management.commands.check_reserved_keywords import (
     Config,
@@ -15,6 +16,7 @@ from release_util.management.commands.check_reserved_keywords import (
     check_model_for_violations,
     collect_concrete_models,
     get_fields_per_model,
+    set_status,
 )
 
 
@@ -122,7 +124,7 @@ def test_invalid_override_config():
         override_file = io.open(
             'release_util/tests/test_check_reserved_keywords/test_files/invalid_overrides.yml', 'r'
         )
-        Config(keyword_file, override_file, 'reports', None)
+        Config(keyword_file, override_file, 'reports', 'report.csv', None)
     exc_msg = str(exception.value)
     assert "Invalid value in override file: BasicModel. second_field" in exc_msg
 
@@ -132,7 +134,7 @@ def test_reserved_keyword_detection(django_setup):
     load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     model = local_models.GrandchildModel
     keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
-    config = Config(keyword_file, None, 'reports', None)
+    config = Config(keyword_file, None, 'reports', 'report.csv', None)
     violations = check_model_for_violations(model, config)
     violation_strings = map(lambda v: v.report_string(), violations)
     expected_violations = [
@@ -154,6 +156,10 @@ def test_reserved_keyword_detection(django_setup):
         ),
     ]
     assert sorted(violation_strings) == expected_violations
+    with pytest.raises(CommandError) as exception:
+        set_status(violations, config)
+    exc_msg = str(exception.value)
+    assert "Found 5 reserved keyword conflicts!" in exc_msg
 
 
 def test_reserved_keyword_detection_specific_system(django_setup):
@@ -161,7 +167,7 @@ def test_reserved_keyword_detection_specific_system(django_setup):
     load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     model = local_models.GrandchildModel
     keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
-    config = Config(keyword_file, None, 'reports', 'STITCH')
+    config = Config(keyword_file, None, 'reports', 'report.csv', 'STITCH')
     violations = check_model_for_violations(model, config)
     violation_strings = map(lambda v: v.report_string(), violations)
     expected_violations = [
@@ -181,7 +187,7 @@ def test_overrides(django_setup):
     model = local_models.GrandchildModel
     keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
     override_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/overrides.yml', 'r')
-    config = Config(keyword_file, override_file, 'reports', None)
+    config = Config(keyword_file, override_file, 'reports', 'report.csv', None)
     violations = check_model_for_violations(model, config)
     assert len(violations) == 5
     overridden_violations = [str(v) for v in violations if v.override]
@@ -191,3 +197,7 @@ def test_overrides(django_setup):
             'test_app/local_app/models.py:GrandchildModel.end'
         )
     ]
+    with pytest.raises(CommandError) as exception:
+        set_status(violations, config)
+    exc_msg = str(exception.value)
+    assert "Found 4 reserved keyword conflicts!" in exc_msg
