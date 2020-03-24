@@ -12,8 +12,12 @@ installed apps.
 
 EXAMPLE USAGE:
 
-python manage.py check_reserved_keywords.py --reserved_keyword_file reserved_keywords.yml \
---override_file overrides.yml --report_path reports
+python manage.py check_reserved_keywords.py \
+    --reserved_keyword_file reserved_keywords.yml \
+    --override_file overrides.yml \
+    --report_path reports \
+    --report_file keyword_report.csv \
+    --system MYSQL
 
 OPTIONS:
 
@@ -22,6 +26,10 @@ OPTIONS:
 * --override_file: pass a yaml file containing a list of model fields to ignore when scanning
   for reserved keyword violations.
 * --report_path: pass a path in which to write a csv report of the violations found with this script.
+* --report_file: name of file in which to write violation report data
+* --system: the type of database management system (MYSQL, SNOWFLAKE), as defined in
+  `reserved_keyword_file`, for which you will be scanning for reserved keywords.
+
 """
 
 import argparse
@@ -140,7 +148,7 @@ class Config(object):
     A collection of configuration data used throughout this script
     """
 
-    def __init__(self, reserved_keyword_config_file, override_file, report_path, system):
+    def __init__(self, reserved_keyword_config_file, override_file, report_path, report_file, system):
         reserved_keyword_config = self.read_config_file(reserved_keyword_config_file)
         if system:
             try:
@@ -157,7 +165,7 @@ class Config(object):
             self.overrides = {}
         self.validate_override_config()
         self.report_path = report_path
-        self.report_file = os.path.join(report_path, "reserved_keyword_report.csv")
+        self.report_file = os.path.join(report_path, report_file)
 
     @staticmethod
     def read_config_file(config_file_path):
@@ -302,10 +310,11 @@ def set_status(violations, config):
     list
     """
     valid_violations = list(
-        filter(lambda v: v not in config.overrides, violations)
+        filter(lambda v: not v.override, violations)
     )
-    if len(valid_violations) > 0:
-        raise CommandError("Found reserved keyword conflicts!")
+    violation_count = len(valid_violations)
+    if violation_count > 0:
+        raise CommandError("Found {} reserved keyword conflicts!".format(violation_count))
     else:
         log.info("No reserved keyword conflicts detected")
 
@@ -354,6 +363,11 @@ class Command(BaseCommand):
             action=writable_dir,
         )
         parser.add_argument(
+            '--report_file',
+            default='reserved_keyword_report.csv',
+            help='Name of file used for writing report data',
+        )
+        parser.add_argument(
             '--system',
             default=None,
             help="Specific system list in 'reserved_keyword_file' to check for (i.e. MYSQL)"
@@ -361,7 +375,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         config = Config(
-            options['reserved_keyword_file'], options['override_file'], options['report_path'], options['system']
+            options['reserved_keyword_file'], options['override_file'],
+            options['report_path'], options['report_file'], options['system']
         )
         concrete_models = collect_concrete_models()
         violations = []
