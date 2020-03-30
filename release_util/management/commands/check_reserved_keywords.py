@@ -74,40 +74,6 @@ class Violation(object):
             self.field
         )
 
-    def report_string(self):
-        """
-        Generate a comma-separated string used for creating a report of the reserved
-        keywords that were found. Output should be returned with the following fields:
-        - system: the system/tool that has the restriction that triggered the violation
-        - app source: was the violation detected in a locally defined or third party installed
-          application
-        - app_name: name of the Django app that contains the violation
-        - module_name: the file path of the Python module containing the violation
-        - model_name: name of the Django model that contains the violation
-        - field: the actual offending field name that triggered the violation
-        - source: is this module/model where the offending field was defined, or was it
-          inherited from another model.
-        """
-        model_name = self.model._meta.concrete_model.__name__
-        app_name = self.model._meta.app_label
-        if self.local_app:
-            app_source = "Local"
-        else:
-            app_source = "3rd party"
-        if not self.inherited:
-            source = "Class Definition"
-        else:
-            source = "Inherited"
-        if self.override:
-            override_string = "Overridden"
-        else:
-            override_string = ""
-        keyword_data_string = (
-            self.system, app_source, app_name, self.module_name, model_name, self.field,
-            source, override_string
-        )
-        return ",".join(keyword_data_string)
-
     @property
     def module_name(self):
         """
@@ -159,6 +125,7 @@ class Config(object):
                 )
         else:
             self.reserved_keyword_config = reserved_keyword_config
+        self.override_file = override_file
         if override_file:
             self.overrides = self.read_config_file(override_file)
         else:
@@ -275,10 +242,12 @@ def check_model_for_violations(model, config):
                     model._meta.concrete_model.__name__,
                     field
                 )
+
                 if system in config.overrides.keys() and full_field_name in config.overrides[system]:
                     override = True
                 else:
                     override = False
+
                 violation = Violation(model, field, system, override)
                 violations.append(violation)
                 if override:
@@ -292,12 +261,25 @@ def generate_report(violations, config):
     """
     Generate a csv file report for the violations that were detected.
     """
+    valid_violation_strings = sorted([str(v) for v in violations if not v.override])
+    overridden_violation_strings = sorted([str(v) for v in violations if v.override])
+
     if not os.path.isdir(config.report_path):
         os.mkdir(config.report_path)
     log.info("Writing report to {}".format(config.report_file))
     with io.open(config.report_file, 'w') as report_file:
-        for violation in violations:
-            report_file.write("{}\n".format(violation.report_string()))
+        report_file.write("Using override_file: {}\n\n".format(config.override_file.name))
+
+        report_file.write("The following violations were detected:\n")
+        report_file.write("---------------------------------------\n")
+        for violation in valid_violation_strings:
+            report_file.write("{}\n".format(violation))
+
+        report_file.write("\n\n")
+        report_file.write("The following violations were detected, but were overridden:\n")
+        report_file.write("------------------------------------------------------------\n")
+        for violation in overridden_violation_strings:
+            report_file.write("{}\n".format(violation))
     log.info(
         "Successfully wrote {} violations to report".format(len(violations))
     )

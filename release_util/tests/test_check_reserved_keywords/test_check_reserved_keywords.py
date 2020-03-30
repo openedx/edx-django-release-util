@@ -136,23 +136,23 @@ def test_reserved_keyword_detection(django_setup):
     keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
     config = Config(keyword_file, None, 'reports', 'report.csv', None)
     violations = check_model_for_violations(model, config)
-    violation_strings = map(lambda v: v.report_string(), violations)
+    violation_strings = sorted([str(v) for v in violations])
     expected_violations = [
         (
-            'MYSQL,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,end,Class Definition,'
+            'MYSQL conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.end'
         ), (
-            'MYSQL,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,nick_name,Inherited,'
+            'MYSQL conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.nick_name'
         ), (
-            'MYSQL,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,start,Inherited,'
+            'MYSQL conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.start'
         ), (
-            'STITCH,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,end,Class Definition,'
+            'STITCH conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.end'
         ), (
-            'STITCH,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,start,Inherited,'
+            'STITCH conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.start'
         ),
     ]
     assert sorted(violation_strings) == expected_violations
@@ -169,14 +169,14 @@ def test_reserved_keyword_detection_specific_system(django_setup):
     keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
     config = Config(keyword_file, None, 'reports', 'report.csv', 'STITCH')
     violations = check_model_for_violations(model, config)
-    violation_strings = map(lambda v: v.report_string(), violations)
+    violation_strings = sorted([str(v) for v in violations])
     expected_violations = [
         (
-            'STITCH,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,end,Class Definition,'
+            'STITCH conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.end'
         ), (
-            'STITCH,Local,local_app,release_util/tests/test_check_reserved_keywords/test_app/'
-            'local_app/models.py,GrandchildModel,start,Inherited,'
+            'STITCH conflict in local_app:release_util/tests/test_check_reserved_keywords/test_app/'
+            'local_app/models.py:GrandchildModel.start'
         ),
     ]
     assert sorted(violation_strings) == expected_violations
