@@ -43,7 +43,7 @@ def dump_migration_session_state(raw):
         pass
 
     def str_block_formatter(dumper, data):
-        return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
     SessionDumper.add_representer(BlockStyle, str_block_formatter)
 
     raw = deepcopy(raw)

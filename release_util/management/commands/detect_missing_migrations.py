@@ -23,7 +23,7 @@ class Command(BaseCommand):
         changed = set()
 
         self.stdout.write("Checking...")
-        for db in settings.DATABASES.keys():
+        for db in list(settings.DATABASES.keys()):
 
             try:
                 executor = MigrationExecutor(connections[db])
@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 self.stdout.write("Unable to check migrations: cannot connect to database '{}'.\n".format(db))
                 sys.exit(1)
 
-            all_apps = apps.app_configs.keys()
+            all_apps = list(apps.app_configs.keys())
             questioner = InteractiveMigrationQuestioner(specified_apps=all_apps, dry_run=True)
 
             autodetector = MigrationAutodetector(
@@ -40,7 +40,7 @@ class Command(BaseCommand):
                 questioner,
             )
 
-            changed.update(autodetector.changes(graph=executor.loader.graph, convert_apps=all_apps).keys())
+            changed.update(list(autodetector.changes(graph=executor.loader.graph, convert_apps=all_apps).keys()))
 
         if changed:
             self.stdout.write(

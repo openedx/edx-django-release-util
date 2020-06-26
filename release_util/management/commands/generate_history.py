@@ -55,7 +55,7 @@ class Command(BaseCommand):
         )
 
     def columns_from_schema(self, cursor, table):
-        query = u"""
+        query = """
             SELECT
                 column_name
             FROM information_schema.columns
@@ -76,7 +76,7 @@ class Command(BaseCommand):
             # The management command would fail if the historical table does not exist.
             historical_table = '_historical'.join(table.rsplit('_', 1))
             with connection.cursor() as cursor:
-                query = u"""
+                query = """
                     SELECT
                         MIN(t.id),
                         MAX(t.id)
@@ -91,20 +91,20 @@ class Command(BaseCommand):
                 cursor.execute(query)
                 start_id, end_id = cursor.fetchone()
                 if not start_id or not end_id:
-                    log.info(u"No records with missing historical records for table %s - skipping.", table)
+                    log.info("No records with missing historical records for table %s - skipping.", table)
                     continue
                 columns = self.columns_from_schema(cursor, table)
             while True:
                 with transaction.atomic():
                     with connection.cursor() as cursor:
                         log.info(
-                            u"Inserting historical records for %s starting with id %s to %s",
+                            "Inserting historical records for %s starting with id %s to %s",
                             table,
                             start_id,
                             start_id + increment - 1,
                         )
                         # xss-lint: disable=python-wrap-html
-                        query = u"""
+                        query = """
                             INSERT INTO {historical_table}(
                                 {insert_columns},history_date,history_change_reason,history_type,history_user_id
                             )
@@ -131,9 +131,9 @@ class Command(BaseCommand):
                         )
                         log.info(query)
                         count = cursor.execute(query)
-                        log.info(u"Inserted %s historical records", count)
+                        log.info("Inserted %s historical records", count)
                 start_id += increment
-                log.info(u"Sleeping %s seconds...", sleep_between)
+                log.info("Sleeping %s seconds...", sleep_between)
                 time.sleep(sleep_between)
                 if start_id > end_id:
                     break

@@ -121,7 +121,7 @@ class MigrationCommandsTests(TransactionTestCase):
 
         def _null_migration_values(status):
             if status:
-                for key in status.keys():
+                for key in list(status.keys()):
                     if key in ('duration', 'output', 'traceback'):
                         status[key] = None
 
