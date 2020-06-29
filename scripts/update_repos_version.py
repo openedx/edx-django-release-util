@@ -101,9 +101,9 @@ def bump_repos_version(module_name, new_version, local_only):
                         # Change the file in-place.
                         for line in fileinput.input(filepath, inplace=True):
                             if '{}=='.format(module_name) in line:
-                                print '{}=={}'.format(module_name, new_version)
+                                print('{}=={}'.format(module_name, new_version))
                             else:
-                                print line,
+                                print(line, end=' ')
 
         if not files_changed:
             # Module name wasn't found in the requirements files.

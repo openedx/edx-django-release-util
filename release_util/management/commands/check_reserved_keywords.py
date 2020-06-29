@@ -140,7 +140,7 @@ class Config(object):
         try:
             config_dict = yaml.safe_load(config_file_path)
             # for ease of use later in this script, change keys without values from None to empty lists
-            for key in config_dict.keys():
+            for key in list(config_dict.keys()):
                 if not config_dict[key]:
                     config_dict[key] = []
         except (yaml.parser.ParserError, FileNotFoundError):
@@ -152,7 +152,7 @@ class Config(object):
     def validate_override_config(self):
         invalid_chars = [' ', ',', '-']
         def check(s): return any([c in invalid_chars for c in s])
-        for system, override_list in self.overrides.items():
+        for system, override_list in list(self.overrides.items()):
             for pattern in override_list:
                 try:
                     model_name, field_name = pattern.split('.')
@@ -235,7 +235,7 @@ def check_model_for_violations(model, config):
     violations = []
 
     for field in get_fields_per_model(model):
-        for system in config.reserved_keyword_config.keys():
+        for system in list(config.reserved_keyword_config.keys()):
             reserved_keywords = [rkw.lower() for rkw in config.reserved_keyword_config[system]]
             if field in reserved_keywords:
                 full_field_name = "{}.{}".format(
@@ -243,7 +243,7 @@ def check_model_for_violations(model, config):
                     field
                 )
 
-                if system in config.overrides.keys() and full_field_name in config.overrides[system]:
+                if system in list(config.overrides.keys()) and full_field_name in config.overrides[system]:
                     override = True
                 else:
                     override = False
@@ -292,7 +292,7 @@ def set_status(violations, config):
     list
     """
     valid_violations = list(
-        filter(lambda v: not v.override, violations)
+        [v for v in violations if not v.override]
     )
     violation_count = len(valid_violations)
     if violation_count > 0:
