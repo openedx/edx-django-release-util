@@ -111,7 +111,7 @@ class MigrationCommandsTests(TransactionTestCase):
     """
     Tests running the management commands related to migrations.
     """
-    multi_db = True
+    databases = '__all__'
 
     def _null_certain_fields(self, status):
         """
