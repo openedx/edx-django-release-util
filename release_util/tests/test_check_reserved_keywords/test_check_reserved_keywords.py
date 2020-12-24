@@ -118,10 +118,10 @@ def test_third_party_app_location_detection(django_setup):
 
 def test_invalid_override_config():
     with pytest.raises(ConfigurationException) as exception:
-        keyword_file = io.open(
+        keyword_file = open(
             'release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r'
         )
-        override_file = io.open(
+        override_file = open(
             'release_util/tests/test_check_reserved_keywords/test_files/invalid_overrides.yml', 'r'
         )
         Config(keyword_file, override_file, 'reports', 'report.csv', None)
@@ -133,7 +133,7 @@ def test_reserved_keyword_detection(django_setup):
     from .test_app.local_app import models as local_models
     load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     model = local_models.GrandchildModel
-    keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
+    keyword_file = open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
     config = Config(keyword_file, None, 'reports', 'report.csv', None)
     violations = check_model_for_violations(model, config)
     violation_strings = sorted([str(v) for v in violations])
@@ -166,7 +166,7 @@ def test_reserved_keyword_detection_specific_system(django_setup):
     from .test_app.local_app import models as local_models
     load_apps(['release_util.tests.test_check_reserved_keywords.test_app.local_app'])
     model = local_models.GrandchildModel
-    keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
+    keyword_file = open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
     config = Config(keyword_file, None, 'reports', 'report.csv', 'STITCH')
     violations = check_model_for_violations(model, config)
     violation_strings = sorted([str(v) for v in violations])
@@ -185,8 +185,8 @@ def test_reserved_keyword_detection_specific_system(django_setup):
 def test_overrides(django_setup):
     from .test_app.local_app import models as local_models
     model = local_models.GrandchildModel
-    keyword_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
-    override_file = io.open('release_util/tests/test_check_reserved_keywords/test_files/overrides.yml', 'r')
+    keyword_file = open('release_util/tests/test_check_reserved_keywords/test_files/reserved_keywords.yml', 'r')
+    override_file = open('release_util/tests/test_check_reserved_keywords/test_files/overrides.yml', 'r')
     config = Config(keyword_file, override_file, 'reports', 'report.csv', None)
     violations = check_model_for_violations(model, config)
     assert len(violations) == 5

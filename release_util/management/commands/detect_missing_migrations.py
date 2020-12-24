@@ -28,7 +28,7 @@ class Command(BaseCommand):
             try:
                 executor = MigrationExecutor(connections[db])
             except OperationalError:
-                self.stdout.write("Unable to check migrations: cannot connect to database '{}'.\n".format(db))
+                self.stdout.write(f"Unable to check migrations: cannot connect to database '{db}'.\n")
                 sys.exit(1)
 
             all_apps = list(apps.app_configs.keys())

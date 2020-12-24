@@ -36,7 +36,7 @@ def is_requirement(line):
     return line and not line.startswith(('-r', '#', '-e', 'git+', '-c'))
 
 
-LONG_DESCRIPTION = io.open('README.rst', encoding='utf-8').read()
+LONG_DESCRIPTION = open('README.rst', encoding='utf-8').read()
 
 setup(
     name='edx-django-release-util',

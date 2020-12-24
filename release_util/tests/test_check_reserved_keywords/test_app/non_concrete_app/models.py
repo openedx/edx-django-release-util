@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from django.db import models
 
 
@@ -9,7 +8,7 @@ class BasicModel(models.Model):
     first_name = models.CharField(max_length=20)
 
 
-class ModelMixin(object):
+class ModelMixin:
     age = 100
 
 

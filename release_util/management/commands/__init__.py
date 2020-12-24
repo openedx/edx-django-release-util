@@ -65,7 +65,7 @@ class MigrationSessionError(ValueError):
     pass
 
 
-class MigrationSession(object):
+class MigrationSession:
     """
     Class which performs migrations while keeping track of the state of each migration.
     Provides the state of all migrations post-migration.
