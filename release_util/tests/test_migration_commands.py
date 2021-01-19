@@ -3,6 +3,7 @@ import sys
 import tempfile
 from datetime import datetime
 from unittest import skip
+from unittest.mock import patch
 
 import ddt
 import six
@@ -11,7 +12,6 @@ from django.core.management import CommandError, call_command
 from django.db import connection
 from django.db.migrations.state import ProjectState
 from django.test import TransactionTestCase
-from mock import patch
 
 import release_util.management.commands.generate_history
 import release_util.tests.migrations.test_migrations
@@ -34,7 +34,7 @@ def remove_and_restore_models(apps):
         def _modify_app_models(*args, **kwargs):
             app_models = wrapped_func(*args, **kwargs)
             new_app_models = {}
-            for model_key, model_value in six.iteritems(app_models.models):
+            for model_key, model_value in app_models.models.items():
                 if model_key not in apps:
                     new_app_models[model_key] = model_value
             return ProjectState(new_app_models)
@@ -327,7 +327,7 @@ class MigrationCommandsTests(TransactionTestCase):
         in_file.close()
 
         # Check the contents of the output file against the expected output.
-        with open(out_file.name, 'r') as f:
+        with open(out_file.name) as f:
             output_yaml = f.read()
         parsed_yaml = yaml.safe_load(output_yaml)
         self.assertTrue(isinstance(parsed_yaml, list))
@@ -384,7 +384,7 @@ class MigrationCommandsTests(TransactionTestCase):
         in_file.close()
 
         # Check the contents of the output file against the expected output.
-        with open(out_file.name, 'r') as f:
+        with open(out_file.name) as f:
             output_yaml = f.read()
         parsed_yaml = yaml.safe_load(output_yaml)
         self.assertTrue(isinstance(parsed_yaml, list))
@@ -466,7 +466,7 @@ class MigrationCommandsTests(TransactionTestCase):
         in_file.flush()
 
         # A bogus class for creating a migration object that will raise a CommandError.
-        class MigrationFail(object):
+        class MigrationFail:
             atomic = False
 
             def state_forwards(self, app_label, state):

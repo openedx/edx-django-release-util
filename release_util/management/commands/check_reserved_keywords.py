@@ -54,7 +54,7 @@ if six.PY2:
 log = logging.getLogger(__name__)
 
 
-class Violation(object):
+class Violation:
     """
     A Django model field name that is in conflict with a defined list of reserved keywords
     """
@@ -80,7 +80,7 @@ class Violation(object):
         The path to the module containing the reserved keyword violation
         """
         module_string = self.model._meta.concrete_model.__module__.replace('.', '/')
-        return "{}.py".format(module_string)
+        return f"{module_string}.py"
 
     @property
     def inherited(self):
@@ -109,7 +109,7 @@ class ConfigurationException(Exception):
     pass
 
 
-class Config(object):
+class Config:
     """
     A collection of configuration data used throughout this script
     """
@@ -121,7 +121,7 @@ class Config(object):
                 self.reserved_keyword_config = {system: reserved_keyword_config[system]}
             except KeyError:
                 raise ConfigurationException(
-                    "Parameter {} missing from config file {}".format(system, reserved_keyword_config_file)
+                    f"Parameter {system} missing from config file {reserved_keyword_config_file}"
                 )
         else:
             self.reserved_keyword_config = reserved_keyword_config
@@ -144,9 +144,9 @@ class Config(object):
                 if not config_dict[key]:
                     config_dict[key] = []
         except (yaml.parser.ParserError, FileNotFoundError):
-            raise ConfigurationException("Unable to load config file: {}".format(config_file_path))
+            raise ConfigurationException(f"Unable to load config file: {config_file_path}")
         if not config_dict:
-            raise ConfigurationException("Config file is empty: {}".format(config_file_path))
+            raise ConfigurationException(f"Config file is empty: {config_file_path}")
         return config_dict
 
     def validate_override_config(self):
@@ -163,7 +163,7 @@ class Config(object):
                         log.error('Invalid character found')
                         raise ValueError()
                 except ValueError:
-                    raise ConfigurationException("Invalid value in override file: {}".format(pattern))
+                    raise ConfigurationException(f"Invalid value in override file: {pattern}")
 
 
 def collect_concrete_models():
@@ -267,19 +267,19 @@ def generate_report(violations, config):
     if not os.path.isdir(config.report_path):
         os.mkdir(config.report_path)
     log.info("Writing report to {}".format(config.report_file))
-    with io.open(config.report_file, 'w') as report_file:
-        report_file.write("Using override_file: {}\n\n".format(config.override_file.name))
+    with open(config.report_file, 'w') as report_file:
+        report_file.write(f"Using override_file: {config.override_file.name}\n\n")
 
         report_file.write("The following violations were detected:\n")
         report_file.write("---------------------------------------\n")
         for violation in valid_violation_strings:
-            report_file.write("{}\n".format(violation))
+            report_file.write(f"{violation}\n")
 
         report_file.write("\n\n")
         report_file.write("The following violations were detected, but were overridden:\n")
         report_file.write("------------------------------------------------------------\n")
         for violation in overridden_violation_strings:
-            report_file.write("{}\n".format(violation))
+            report_file.write(f"{violation}\n")
     log.info(
         "Successfully wrote {} violations to report".format(len(violations))
     )
@@ -296,7 +296,7 @@ def set_status(violations, config):
     )
     violation_count = len(valid_violations)
     if violation_count > 0:
-        raise CommandError("Found {} reserved keyword conflicts!".format(violation_count))
+        raise CommandError(f"Found {violation_count} reserved keyword conflicts!")
     else:
         log.info("No reserved keyword conflicts detected")
 
@@ -309,9 +309,9 @@ class writable_dir(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         prospective_dir = values
         if not os.path.isdir(prospective_dir):
-            raise argparse.ArgumentTypeError("{} is not a valid path".format(prospective_dir))
+            raise argparse.ArgumentTypeError(f"{prospective_dir} is not a valid path")
         elif not os.access(prospective_dir, os.W_OK):
-            raise argparse.ArgumentTypeError("{} is not a readable dir".format(prospective_dir))
+            raise argparse.ArgumentTypeError(f"{prospective_dir} is not a readable dir")
         else:
             setattr(namespace, self.dest, prospective_dir)
 

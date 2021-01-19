@@ -29,7 +29,7 @@ REPO_URL_FORMAT = 'https://github.com/{}/{}'
 
 
 
-class GitHubApiUtils(object):
+class GitHubApiUtils:
     """
     Class to query/set GitHub info.
     """
@@ -71,7 +71,7 @@ def bump_repos_version(module_name, new_version, local_only):
         os.chdir(tmp_dir)
 
         # Clone the repo.
-        ret_code = subprocess.call(['git', 'clone', '{}.git'.format(repo_url)])
+        ret_code = subprocess.call(['git', 'clone', f'{repo_url}.git'])
         if ret_code:
             logging.error('Failed to clone repo {}'.format(repo_url))
             continue
@@ -80,7 +80,7 @@ def bump_repos_version(module_name, new_version, local_only):
         os.chdir(repo_name)
 
         # Create a branch, using the version number.
-        branch_name = '{}/{}'.format(module_name, new_version)
+        branch_name = f'{module_name}/{new_version}'
         ret_code = subprocess.call(['git', 'checkout', '-b', branch_name])
         if ret_code:
             logging.error('Failed to create branch in repo {}'.format(repo_url))
@@ -94,14 +94,14 @@ def bump_repos_version(module_name, new_version, local_only):
                     found = False
                     filepath = os.path.join(root, file)
                     with open(filepath) as f:
-                        if '{}=='.format(module_name) in f.read():
+                        if f'{module_name}==' in f.read():
                             found = True
                     if found:
                         files_changed = True
                         # Change the file in-place.
                         for line in fileinput.input(filepath, inplace=True):
-                            if '{}=='.format(module_name) in line:
-                                print('{}=={}'.format(module_name, new_version))
+                            if f'{module_name}==' in line:
+                                print(f'{module_name}=={new_version}')
                             else:
                                 print(line, end=' ')
 
@@ -111,7 +111,7 @@ def bump_repos_version(module_name, new_version, local_only):
             continue
 
         # Add/commit the files.
-        ret_code = subprocess.call(['git', 'commit', '-am', 'Updating {} requirement to version {}'.format(module_name, new_version)])
+        ret_code = subprocess.call(['git', 'commit', '-am', f'Updating {module_name} requirement to version {new_version}'])
         if ret_code:
             logging.error("Failed to add and commit changed files to repo {}".format(repo_url))
             continue
@@ -131,8 +131,8 @@ def bump_repos_version(module_name, new_version, local_only):
         try:
             # The GitHub "mention" below does not work via the API - unfortunately...
             response = gh.create_pull(
-                title='Change {} version.'.format(module_name),
-                body='Change the required version of {} to {}.\n\n@edx-ops/pipeline-team Please review and tag appropriate parties.'.format(module_name, new_version),
+                title=f'Change {module_name} version.',
+                body=f'Change the required version of {module_name} to {new_version}.\n\n@edx-ops/pipeline-team Please review and tag appropriate parties.',
                 head=branch_name,
                 base='master'
             )

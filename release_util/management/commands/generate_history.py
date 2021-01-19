@@ -35,7 +35,7 @@ class Command(BaseCommand):
     HISTORY_CHANGE_REASON = 'initial history population'
 
     def add_arguments(self, parser):
-        super(Command, self).add_arguments(parser)
+        super().add_arguments(parser)
 
         parser.add_argument("--tables", nargs="*", type=str)
 
@@ -121,8 +121,8 @@ class Command(BaseCommand):
                                 # this cmd fails for tables containing reserved keywords in column.
                                 # https://dev.mysql.com/doc/refman/5.5/en/glossary.html
                                 # Backticked columns to avoid MYSQL errors
-                                insert_columns=','.join(['`{}`'.format(c) for c in columns]),
-                                select_columns=','.join(['t.`{}`'.format(c) for c in columns]),
+                                insert_columns=','.join([f'`{c}`' for c in columns]),
+                                select_columns=','.join([f't.`{c}`' for c in columns]),
                                 history_date=self.HISTORY_DATE,
                                 history_change_reason=self.HISTORY_CHANGE_REASON,
                                 history_user_id=self.HISTORY_USER_ID,

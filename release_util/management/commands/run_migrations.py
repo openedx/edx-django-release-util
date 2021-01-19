@@ -73,7 +73,7 @@ class Command(BaseCommand):
         try:
             migrator.apply_all()
         except CommandError as e:
-            self.stderr.write("Migration error: {}".format(e))
+            self.stderr.write(f"Migration error: {e}")
             failure = True
 
         state = dump_migration_session_state(migrator.state)
