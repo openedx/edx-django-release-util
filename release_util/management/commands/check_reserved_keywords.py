@@ -251,7 +251,7 @@ def check_model_for_violations(model, config):
                 violation = Violation(model, field, system, override)
                 violations.append(violation)
                 if override:
-                    log.warn("Violation detected but on whitelist: {}".format(violation))
+                    log.warning("Violation detected but on whitelist: {}".format(violation))
                 else:
                     log.error("Violation detected: {}".format(violation))
     return violations
