@@ -2,12 +2,11 @@
 """
 Setup script for the edx-django-release-util package.
 """
-
 import io
+import os
+import re
 
 from setuptools import find_packages, setup
-
-import release_util
 
 
 def load_requirements(*requirements_paths):
@@ -36,11 +35,25 @@ def is_requirement(line):
     return line and not line.startswith(('-r', '#', '-e', 'git+', '-c'))
 
 
+def get_version(*file_paths):
+    """
+    Extract the version string from the file at the given relative path fragments.
+    """
+    filename = os.path.join(os.path.dirname(__file__), *file_paths)
+    version_file = open(filename).read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+
 LONG_DESCRIPTION = open('README.rst', encoding='utf-8').read()
+VERSION = get_version("release_util", "__init__.py")
+
 
 setup(
     name='edx-django-release-util',
-    version=release_util.__version__,
+    version=VERSION,
     description='edx-django-release-util',
     author='edX',
     author_email='oscm@edx.org',
