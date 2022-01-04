@@ -4,37 +4,35 @@
 #
 #    make upgrade
 #
-certifi==2021.5.30
+certifi==2021.10.8
     # via requests
-cffi==1.14.6
+cffi==1.15.0
     # via cryptography
-charset-normalizer==2.0.2
+charset-normalizer==2.0.9
     # via requests
-click==8.0.1
+click==8.0.3
     # via -r requirements/scripts.in
-cryptography==3.4.7
+cryptography==36.0.1
     # via jwcrypto
-deprecated==1.2.12
+deprecated==1.2.13
     # via jwcrypto
-github3.py==2.0.0
+github3.py==3.0.0
     # via -r requirements/scripts.in
-idna==3.2
+idna==3.3
     # via requests
-jwcrypto==0.9.1
+jwcrypto==1.0
     # via github3.py
-pycparser==2.20
+pycparser==2.21
     # via cffi
 python-dateutil==2.8.2
     # via github3.py
-requests==2.26.0
+requests==2.27.0
     # via github3.py
 six==1.16.0
-    # via
-    #   jwcrypto
-    #   python-dateutil
-uritemplate==3.0.1
+    # via python-dateutil
+uritemplate==4.1.1
     # via github3.py
-urllib3==1.26.6
+urllib3==1.26.7
     # via requests
-wrapt==1.12.1
+wrapt==1.13.3
     # via deprecated
