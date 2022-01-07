@@ -4,15 +4,17 @@
 #
 #    make upgrade
 #
-django==2.2.24
-    # via
-    #   -c requirements/constraints.txt
-    #   -r requirements/base.in
-pytz==2021.1
+asgiref==3.4.1
     # via django
-pyyaml==5.4.1
+django==3.2.11
+    # via
+    #   -c https://raw.githubusercontent.com/edx/edx-lint/master/edx_lint/files/common_constraints.txt
+    #   -r requirements/base.in
+pytz==2021.3
+    # via django
+pyyaml==6.0
     # via -r requirements/base.in
 six==1.16.0
     # via -r requirements/base.in
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via django
