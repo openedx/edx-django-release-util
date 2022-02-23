@@ -4,7 +4,7 @@
 #
 #    make upgrade
 #
-asgiref==3.4.1
+asgiref==3.5.0
     # via
     #   -r requirements/test.txt
     #   django
@@ -12,7 +12,7 @@ attrs==21.4.0
     # via
     #   -r requirements/test.txt
     #   pytest
-coverage[toml]==6.2
+coverage[toml]==6.3.1
     # via
     #   -r requirements/test.txt
     #   pytest-cov
@@ -22,11 +22,11 @@ distlib==0.3.4
     # via
     #   -r requirements/test.txt
     #   virtualenv
-django==3.2.11
+django==3.2.12
     # via
     #   -c https://raw.githubusercontent.com/edx/edx-lint/master/edx_lint/files/common_constraints.txt
     #   -r requirements/test.txt
-django-waffle==2.2.1
+django-waffle==2.3.0
     # via -r requirements/test.txt
 filelock==3.4.2
     # via
@@ -46,7 +46,7 @@ packaging==21.3
     #   -r requirements/test.txt
     #   pytest
     #   tox
-path==16.2.0
+path==16.3.0
     # via
     #   -r requirements/test.txt
     #   path.py
@@ -70,7 +70,7 @@ pycodestyle==2.8.0
     # via -r requirements/quality.in
 pydocstyle==6.1.1
     # via -r requirements/quality.in
-pyparsing==3.0.6
+pyparsing==3.0.7
     # via
     #   -r requirements/test.txt
     #   packaging

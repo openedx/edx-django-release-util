@@ -8,7 +8,7 @@ certifi==2021.10.8
     # via requests
 cffi==1.15.0
     # via cryptography
-charset-normalizer==2.0.9
+charset-normalizer==2.0.11
     # via requests
 click==8.0.3
     # via -r requirements/scripts.in
@@ -26,13 +26,13 @@ pycparser==2.21
     # via cffi
 python-dateutil==2.8.2
     # via github3.py
-requests==2.27.0
+requests==2.27.1
     # via github3.py
 six==1.16.0
     # via python-dateutil
 uritemplate==4.1.1
     # via github3.py
-urllib3==1.26.7
+urllib3==1.26.8
     # via requests
 wrapt==1.13.3
     # via deprecated
