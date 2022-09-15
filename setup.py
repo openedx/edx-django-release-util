@@ -59,7 +59,7 @@ setup(
     author_email='oscm@edx.org',
     long_description=LONG_DESCRIPTION,
     license='AGPL 3.0',
-    url='http://github.com/edx/edx-django-release-util',
+    url='http://github.com/openedx/edx-django-release-util',
     install_requires=load_requirements('requirements/base.in'),
     packages=find_packages(exclude=['*.test', '*.tests']),
     include_package_data=True,
