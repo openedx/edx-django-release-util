@@ -181,6 +181,7 @@ class MigrationCommandsTests(TransactionTestCase):
                         {'app': 'release_util', 'migration': '0001_initial'},
                         {'app': 'release_util', 'migration': '0002_second'},
                         {'app': 'release_util', 'migration': '0003_third'},
+                        {'app': 'release_util', 'migration': '0004_fourth'},
                     ]
                 },
                 exit_value=exit_code
@@ -201,6 +202,7 @@ class MigrationCommandsTests(TransactionTestCase):
                     'migrations': [
                         {'app': 'release_util', 'migration': '0002_second'},
                         {'app': 'release_util', 'migration': '0003_third'},
+                        {'app': 'release_util', 'migration': '0004_fourth'},
                     ]
                 },
                 exit_value=exit_code
@@ -220,12 +222,32 @@ class MigrationCommandsTests(TransactionTestCase):
                     'initial_states': [{'app': 'release_util', 'migration': '0002_second'}],
                     'migrations': [
                         {'app': 'release_util', 'migration': '0003_third'},
+                        {'app': 'release_util', 'migration': '0004_fourth'},
                     ]
                 },
                 exit_value=exit_code
             )
 
         call_command("migrate", "release_util", "0003", verbosity=0)
+
+        for fail_on_unapplied, exit_code in (
+                (True, 1),
+                (False, 0),
+        ):
+            self._check_command_output(
+                cmd="show_unapplied_migrations",
+                cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
+                output={
+                    'database': 'default',
+                    'initial_states': [{'app': 'release_util', 'migration': '0003_third'}],
+                    'migrations': [
+                        {'app': 'release_util', 'migration': '0004_fourth'},
+                    ]
+                },
+                exit_value=exit_code
+            )
+
+        call_command("migrate", "release_util", "0004", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
                 (True, 0),
@@ -283,6 +305,7 @@ class MigrationCommandsTests(TransactionTestCase):
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
           - [release_util, 0003_third]
+          - [release_util, 0004_fourth]
         initial_states:
           - [release_util, zero]
         """
@@ -301,6 +324,11 @@ class MigrationCommandsTests(TransactionTestCase):
                 },
                 {
                     'migration': ['release_util', '0003_third'],
+                    'duration': None,
+                    'output': None
+                },
+                {
+                    'migration': ['release_util', '0004_fourth'],
                     'duration': None,
                     'output': None
                 },
@@ -349,6 +377,7 @@ class MigrationCommandsTests(TransactionTestCase):
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
           - [release_util, 0003_third]
+          - [release_util, 0004_fourth]
         initial_states:
           - [release_util, zero]
         """
@@ -363,6 +392,7 @@ class MigrationCommandsTests(TransactionTestCase):
                     ['release_util', '0001_initial'],
                     ['release_util', '0002_second'],
                     ['release_util', '0003_third'],
+                    ['release_util', '0004_fourth'],
                 ],
                 'traceback': None,
                 'succeeded': True,
@@ -441,6 +471,25 @@ class MigrationCommandsTests(TransactionTestCase):
                 }
             ],
         ),
+        (
+            '0004_fourth',
+            [
+                {
+                    'database': 'default',
+                    'failed_migration': ['release_util', '0004_fourth'],
+                    'migration': 'all',
+                    'succeeded_migrations': [
+                        ['release_util', '0001_initial'],
+                        ['release_util', '0002_second'],
+                        ['release_util', '0003_third'],
+                    ],
+                    'duration': None,
+                    'output': None,
+                    'traceback': None,
+                    'succeeded': False,
+                }
+            ],
+        ),
     )
     @ddt.unpack
     def test_run_migrations_failure(self, migration_name, migration_output):
@@ -457,6 +506,7 @@ class MigrationCommandsTests(TransactionTestCase):
           - [release_util, 0001_initial]
           - [release_util, 0002_second]
           - [release_util, 0003_third]
+          - [release_util, 0004_fourth]
         initial_states:
           - [release_util, zero]
         """
