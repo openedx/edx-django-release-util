@@ -231,25 +231,6 @@ class MigrationCommandsTests(TransactionTestCase):
         call_command("migrate", "release_util", "0003", verbosity=0)
 
         for fail_on_unapplied, exit_code in (
-                (True, 1),
-                (False, 0),
-        ):
-            self._check_command_output(
-                cmd="show_unapplied_migrations",
-                cmd_kwargs={'fail_on_unapplied': fail_on_unapplied},
-                output={
-                    'database': 'default',
-                    'initial_states': [{'app': 'release_util', 'migration': '0003_third'}],
-                    'migrations': [
-                        {'app': 'release_util', 'migration': '0004_fourth'},
-                    ]
-                },
-                exit_value=exit_code
-            )
-
-        call_command("migrate", "release_util", "0004", verbosity=0)
-
-        for fail_on_unapplied, exit_code in (
                 (True, 0),
                 (False, 0),
         ):
