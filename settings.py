@@ -58,7 +58,7 @@ MIGRATION_MODULES = {
     'release_util': 'release_util.tests.migrations.test_migrations'
 }
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware'
