@@ -11,11 +11,11 @@ cffi==1.16.0
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
-    # via -r requirements/scripts.in
+    # via -r scripts.in
 cryptography==42.0.5
     # via pyjwt
 github3-py==4.0.1
-    # via -r requirements/scripts.in
+    # via -r scripts.in
 idna==3.6
     # via requests
 pycparser==2.21
@@ -30,5 +30,5 @@ six==1.16.0
     # via python-dateutil
 uritemplate==4.1.1
     # via github3-py
-urllib3==2.2.1
+urllib3==2.2.2
     # via requests
