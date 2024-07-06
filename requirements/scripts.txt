@@ -4,18 +4,18 @@
 #
 #    make upgrade
 #
-certifi==2024.2.2
+certifi==2024.7.4
     # via requests
 cffi==1.16.0
     # via cryptography
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
-    # via -r requirements/scripts.in
+    # via -r scripts.in
 cryptography==42.0.5
     # via pyjwt
 github3-py==4.0.1
-    # via -r requirements/scripts.in
+    # via -r scripts.in
 idna==3.6
     # via requests
 pycparser==2.21
